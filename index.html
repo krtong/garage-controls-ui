@@ -149,6 +149,43 @@
         color: #03121f;
         border-color: transparent;
       }
+      .segmented {
+        display: inline-flex;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+      .segmented button {
+        border-radius: 0;
+        border: none;
+        background: transparent;
+        color: var(--text);
+        padding: 10px 14px;
+        font-size: 14px;
+        min-height: 40px;
+      }
+      .segmented button.active {
+        background: rgba(34, 211, 238, 0.2);
+        color: var(--accent-2);
+      }
+      .list {
+        display: grid;
+        gap: 10px;
+      }
+      .list-item {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.6);
+      }
+      .list-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .list-meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
       @media (max-width: 640px) {
         body { padding: 16px; }
         .wrap { padding: 16px; }
@@ -212,6 +249,24 @@
           <button id="save">Save settings</button>
           <button id="logout" class="secondary">Sign out</button>
         </div>
+        <div class="meta" id="save-status"></div>
+      </section>
+
+      <section id="data" class="hidden">
+        <div class="card grid">
+          <div class="row-inline">
+            <div style="font-weight:600;">Live data</div>
+            <div class="segmented">
+              <button id="view-events" class="active" type="button">Events</button>
+              <button id="view-state" type="button">State</button>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="refresh-data" class="secondary">Refresh</button>
+          </div>
+          <div id="data-list" class="list"></div>
+          <div class="meta" id="data-status"></div>
+        </div>
       </section>
     </div>
 
@@ -222,9 +277,9 @@
       const SUPABASE_ANON_KEY = "sb_publishable_E8-dvNNh5V3VQLAcK-xqiQ_dLEu1Bsh";
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      const statusEl = document.getElementById("status");
       const authEl = document.getElementById("auth");
       const settingsEl = document.getElementById("settings");
+      const dataEl = document.getElementById("data");
 
       const emailEl = document.getElementById("email");
       const passwordEl = document.getElementById("password");
@@ -233,7 +288,13 @@
       const closeDelayEl = document.getElementById("close_delay_min");
       const checkDelayEl = document.getElementById("check_delay_min");
       const retryDelayEl = document.getElementById("retry_delay_min");
+      const saveStatusEl = document.getElementById("save-status");
+      const dataListEl = document.getElementById("data-list");
+      const dataStatusEl = document.getElementById("data-status");
+      const viewEventsEl = document.getElementById("view-events");
+      const viewStateEl = document.getElementById("view-state");
       let currentProcessId = "global";
+      let currentDataView = "events";
 
       async function loadSettings() {
         const { data, error } = await supabase
@@ -242,7 +303,7 @@
           .eq("id", currentProcessId)
           .single();
         if (error) {
-          if (statusEl) statusEl.textContent = "Failed to load settings: " + error.message;
+          if (saveStatusEl) saveStatusEl.textContent = "Failed to load settings: " + error.message;
           return;
         }
         enabledEl.checked = data.enabled ?? true;
@@ -281,7 +342,7 @@
           .select("*")
           .order("label", { ascending: true });
         if (error) {
-          if (statusEl) statusEl.textContent = "Failed to load processes: " + error.message;
+          if (saveStatusEl) saveStatusEl.textContent = "Failed to load processes: " + error.message;
           return;
         }
         const processes = data ?? [];
@@ -297,12 +358,15 @@
         if (session) {
           authEl.classList.add("hidden");
           settingsEl.classList.remove("hidden");
-          if (statusEl) statusEl.textContent = "";
+          dataEl.classList.remove("hidden");
+          if (saveStatusEl) saveStatusEl.textContent = "";
           await loadProcesses();
+          await loadData();
         } else {
           authEl.classList.remove("hidden");
           settingsEl.classList.add("hidden");
-          if (statusEl) statusEl.textContent = "Please sign in";
+          dataEl.classList.add("hidden");
+          if (saveStatusEl) saveStatusEl.textContent = "Please sign in";
         }
       }
 
@@ -311,7 +375,7 @@
         const password = passwordEl.value;
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          if (statusEl) statusEl.textContent = "Sign in failed: " + error.message;
+          if (saveStatusEl) saveStatusEl.textContent = "Sign in failed: " + error.message;
           return;
         }
         await refreshSession();
@@ -329,10 +393,104 @@
           .from("garage_settings")
           .upsert(payload, { onConflict: "id" });
         if (error) {
-          if (statusEl) statusEl.textContent = "Save failed: " + error.message;
+          if (saveStatusEl) saveStatusEl.textContent = "Save failed: " + error.message;
           return;
         }
-        if (statusEl) statusEl.textContent = "";
+        if (saveStatusEl) saveStatusEl.textContent = "Saved.";
+        setTimeout(() => {
+          if (saveStatusEl) saveStatusEl.textContent = "";
+        }, 1500);
+      });
+
+      function setActiveView(view) {
+        currentDataView = view;
+        viewEventsEl.classList.toggle("active", view === "events");
+        viewStateEl.classList.toggle("active", view === "state");
+      }
+
+      async function loadEvents() {
+        dataListEl.innerHTML = "";
+        if (dataStatusEl) dataStatusEl.textContent = "Loading…";
+        const { data, error } = await supabase
+          .from("garage_events")
+          .select("id,created_at,event_type,door")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (error) {
+          if (dataStatusEl) dataStatusEl.textContent = "Failed to load events: " + error.message;
+          return;
+        }
+        if (!data || !data.length) {
+          if (dataStatusEl) dataStatusEl.textContent = "No events yet.";
+          return;
+        }
+        if (dataStatusEl) dataStatusEl.textContent = "";
+        data.forEach((row) => {
+          const item = document.createElement("div");
+          item.className = "list-item";
+          const title = document.createElement("div");
+          title.className = "list-title";
+          title.textContent = `${row.event_type ?? "EVENT"} • ${row.door ?? "?"}`;
+          const meta = document.createElement("div");
+          meta.className = "list-meta";
+          meta.textContent = row.created_at ?? "";
+          item.appendChild(title);
+          item.appendChild(meta);
+          dataListEl.appendChild(item);
+        });
+      }
+
+      async function loadState() {
+        dataListEl.innerHTML = "";
+        if (dataStatusEl) dataStatusEl.textContent = "Loading…";
+        const { data, error } = await supabase
+          .from("garage_state")
+          .select("door,is_open,session_start,last_open,last_close,next_action,next_action_at")
+          .order("door", { ascending: true });
+        if (error) {
+          if (dataStatusEl) dataStatusEl.textContent = "Failed to load state: " + error.message;
+          return;
+        }
+        if (!data || !data.length) {
+          if (dataStatusEl) dataStatusEl.textContent = "No state rows yet.";
+          return;
+        }
+        if (dataStatusEl) dataStatusEl.textContent = "";
+        data.forEach((row) => {
+          const item = document.createElement("div");
+          item.className = "list-item";
+          const title = document.createElement("div");
+          title.className = "list-title";
+          title.textContent = `${row.door ?? "?"} • ${row.is_open ? "OPEN" : "CLOSED"}`;
+          const meta = document.createElement("div");
+          meta.className = "list-meta";
+          meta.textContent = `next: ${row.next_action ?? "—"} @ ${row.next_action_at ?? "—"}`;
+          item.appendChild(title);
+          item.appendChild(meta);
+          dataListEl.appendChild(item);
+        });
+      }
+
+      async function loadData() {
+        if (currentDataView === "state") {
+          await loadState();
+        } else {
+          await loadEvents();
+        }
+      }
+
+      viewEventsEl.addEventListener("click", async () => {
+        setActiveView("events");
+        await loadData();
+      });
+
+      viewStateEl.addEventListener("click", async () => {
+        setActiveView("state");
+        await loadData();
+      });
+
+      document.getElementById("refresh-data").addEventListener("click", async () => {
+        await loadData();
       });
 
 
