@@ -178,6 +178,20 @@
         border: 1px solid rgba(42, 51, 82, 0.6);
         background: rgba(9, 13, 26, 0.6);
       }
+      .list-row {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 1fr;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .list-row strong {
+        display: block;
+        color: var(--text);
+        font-weight: 600;
+        font-size: 14px;
+      }
       .list-title {
         font-weight: 600;
         margin-bottom: 4px;
@@ -292,6 +306,7 @@
           </div>
           <div class="actions">
             <button id="refresh-data" class="secondary">Refresh</button>
+            <button id="load-more-events" class="secondary">Load more</button>
           </div>
           <div id="data-list" class="list"></div>
           <div class="meta" id="data-status"></div>
@@ -326,9 +341,13 @@
       const dataStatusEl = document.getElementById("data-status");
       const viewEventsEl = document.getElementById("view-events");
       const viewStateEl = document.getElementById("view-state");
+      const loadMoreEventsEl = document.getElementById("load-more-events");
       const toastEl = document.getElementById("toast");
       let currentProcessId = "global";
       let currentDataView = "events";
+      const DOORS = ["Left", "Middle", "Right"];
+      const EVENTS_PAGE_SIZE = 200;
+      let eventsLimit = EVENTS_PAGE_SIZE;
 
       async function loadSettings() {
         const { data, error } = await supabase
@@ -498,7 +517,7 @@
           .from("garage_events")
           .select("id,created_at,event_type,door")
           .order("created_at", { ascending: false })
-          .limit(200);
+          .limit(eventsLimit);
         if (error) {
           if (dataStatusEl) dataStatusEl.textContent = "Failed to load events: " + error.message;
           return;
@@ -507,19 +526,25 @@
           if (dataStatusEl) dataStatusEl.textContent = "No events yet.";
           return;
         }
-        if (dataStatusEl) dataStatusEl.textContent = "";
+        if (dataStatusEl) dataStatusEl.textContent = `Showing ${data.length} most recent events.`;
         data.forEach((row) => {
           const item = document.createElement("div");
           item.className = "list-item";
           const title = document.createElement("div");
           title.className = "list-title";
-          title.textContent = `${row.event_type ?? "EVENT"} • ${row.door ?? "?"}`;
+          title.textContent = row.event_type ?? "EVENT";
           const meta = document.createElement("div");
           meta.className = "list-meta";
-          const idLine = row.id ? `#${row.id}` : "";
-          meta.textContent = [formatTimestamp(row.created_at), idLine].filter(Boolean).join(" • ");
+          const rowLine = document.createElement("div");
+          rowLine.className = "list-row";
+          rowLine.innerHTML = `
+            <div><strong>${row.door ?? "?"}</strong>Door</div>
+            <div><strong>${formatTimestamp(row.created_at)}</strong>Time</div>
+            <div><strong>${row.id ?? "—"}</strong>Row</div>
+          `;
           item.appendChild(title);
           item.appendChild(meta);
+          item.appendChild(rowLine);
           dataListEl.appendChild(item);
         });
       }
@@ -540,12 +565,20 @@
           return;
         }
         if (dataStatusEl) dataStatusEl.textContent = "";
+        const byDoor = {};
         data.forEach((row) => {
+          if (row.door) {
+            byDoor[row.door] = row;
+          }
+        });
+        DOORS.forEach((door) => {
+          const row = byDoor[door] || {};
           const item = document.createElement("div");
           item.className = "list-item";
           const title = document.createElement("div");
           title.className = "list-title";
-          title.textContent = `${row.door ?? "?"} • ${row.is_open ? "OPEN" : "CLOSED"}`;
+          const isOpen = row.is_open === true;
+          title.textContent = `${door} • ${row.door ? (isOpen ? "OPEN" : "CLOSED") : "NO DATA"}`;
           const meta = document.createElement("div");
           meta.className = "list-meta";
           const nextLine = `next: ${row.next_action ?? "—"} @ ${formatTimestamp(row.next_action_at)}`;
@@ -568,17 +601,28 @@
 
       viewEventsEl.addEventListener("click", async () => {
         setActiveView("events");
+        if (loadMoreEventsEl) loadMoreEventsEl.disabled = false;
         await loadData();
       });
 
       viewStateEl.addEventListener("click", async () => {
         setActiveView("state");
+        if (loadMoreEventsEl) loadMoreEventsEl.disabled = true;
         await loadData();
       });
 
       document.getElementById("refresh-data").addEventListener("click", async () => {
+        eventsLimit = EVENTS_PAGE_SIZE;
         await loadData();
       });
+
+      if (loadMoreEventsEl) {
+        loadMoreEventsEl.addEventListener("click", async () => {
+          if (currentDataView !== "events") return;
+          eventsLimit += EVENTS_PAGE_SIZE;
+          await loadEvents();
+        });
+      }
 
 
       document.getElementById("logout").addEventListener("click", async () => {
