@@ -185,6 +185,7 @@
       .list-meta {
         font-size: 13px;
         color: var(--muted);
+        line-height: 1.4;
       }
       .toast {
         position: fixed;
@@ -497,7 +498,7 @@
           .from("garage_events")
           .select("id,created_at,event_type,door")
           .order("created_at", { ascending: false })
-          .limit(50);
+          .limit(200);
         if (error) {
           if (dataStatusEl) dataStatusEl.textContent = "Failed to load events: " + error.message;
           return;
@@ -515,7 +516,8 @@
           title.textContent = `${row.event_type ?? "EVENT"} • ${row.door ?? "?"}`;
           const meta = document.createElement("div");
           meta.className = "list-meta";
-          meta.textContent = formatTimestamp(row.created_at);
+          const idLine = row.id ? `#${row.id}` : "";
+          meta.textContent = [formatTimestamp(row.created_at), idLine].filter(Boolean).join(" • ");
           item.appendChild(title);
           item.appendChild(meta);
           dataListEl.appendChild(item);
@@ -546,7 +548,10 @@
           title.textContent = `${row.door ?? "?"} • ${row.is_open ? "OPEN" : "CLOSED"}`;
           const meta = document.createElement("div");
           meta.className = "list-meta";
-          meta.textContent = `next: ${row.next_action ?? "—"} @ ${formatTimestamp(row.next_action_at)}`;
+          const nextLine = `next: ${row.next_action ?? "—"} @ ${formatTimestamp(row.next_action_at)}`;
+          const lastOpenLine = `last open: ${formatTimestamp(row.last_open)}`;
+          const lastCloseLine = `last close: ${formatTimestamp(row.last_close)}`;
+          meta.innerHTML = [nextLine, lastOpenLine, lastCloseLine].join("<br/>");
           item.appendChild(title);
           item.appendChild(meta);
           dataListEl.appendChild(item);
