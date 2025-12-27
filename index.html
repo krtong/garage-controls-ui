@@ -186,6 +186,35 @@
         font-size: 13px;
         color: var(--muted);
       }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%) translateY(24px);
+        background: rgba(12, 18, 34, 0.95);
+        border: 1px solid rgba(42, 51, 82, 0.8);
+        color: var(--text);
+        padding: 12px 18px;
+        border-radius: 14px;
+        font-size: 14px;
+        box-shadow: 0 16px 32px rgba(2, 6, 20, 0.6);
+        opacity: 0;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 999;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      .toast.success { border-color: rgba(52, 211, 153, 0.7); color: var(--success); }
+      .toast.error { border-color: rgba(248, 113, 113, 0.7); color: var(--danger); }
+      .pulse {
+        animation: pulse 0.6s ease;
+      }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); }
+        100% { box-shadow: 0 0 0 12px rgba(34, 211, 238, 0); }
+      }
       @media (max-width: 640px) {
         body { padding: 16px; }
         .wrap { padding: 16px; }
@@ -269,6 +298,7 @@
         </div>
       </section>
     </div>
+    <div id="toast" class="toast"></div>
 
     <script type="module">
       import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -293,6 +323,7 @@
       const dataStatusEl = document.getElementById("data-status");
       const viewEventsEl = document.getElementById("view-events");
       const viewStateEl = document.getElementById("view-state");
+      const toastEl = document.getElementById("toast");
       let currentProcessId = "global";
       let currentDataView = "events";
 
@@ -382,6 +413,16 @@
       });
 
       document.getElementById("save").addEventListener("click", async () => {
+        await saveSettings({ announce: false, signal: false });
+      });
+
+      enabledEl.addEventListener("change", async () => {
+        enabledEl.classList.add("pulse");
+        setTimeout(() => enabledEl.classList.remove("pulse"), 600);
+        await saveSettings({ announce: true, signal: true });
+      });
+
+      async function saveSettings({ announce, signal }) {
         const payload = {
           id: currentProcessId,
           enabled: enabledEl.checked,
@@ -394,13 +435,39 @@
           .upsert(payload, { onConflict: "id" });
         if (error) {
           if (saveStatusEl) saveStatusEl.textContent = "Save failed: " + error.message;
+          if (announce) showToast("Failed to save settings.", "error");
           return;
         }
         if (saveStatusEl) saveStatusEl.textContent = "Saved.";
         setTimeout(() => {
           if (saveStatusEl) saveStatusEl.textContent = "";
         }, 1500);
-      });
+
+        if (signal) {
+          const { error: fnError } = await supabase.functions.invoke("garage-scheduler", {
+            body: {},
+          });
+          if (fnError) {
+            if (announce) {
+              showToast("Saved, but scheduler ping failed.", "error");
+            }
+          } else if (announce) {
+            showToast(enabledEl.checked ? "Scheduler resumed." : "Scheduler paused.", "success");
+          }
+        } else if (announce) {
+          showToast("Settings saved.", "success");
+        }
+      }
+
+      function showToast(message, type) {
+        if (!toastEl) return;
+        toastEl.textContent = message;
+        toastEl.className = `toast show ${type || ""}`.trim();
+        setTimeout(() => {
+          toastEl.className = "toast";
+          toastEl.textContent = "";
+        }, 2000);
+      }
 
       function setActiveView(view) {
         currentDataView = view;
