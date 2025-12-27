@@ -217,7 +217,6 @@
           <button id="save">Save settings</button>
           <button id="logout" class="secondary">Sign out</button>
         </div>
-        <div class="meta" id="user-email"></div>
       </section>
     </div>
 
@@ -231,7 +230,6 @@
       const statusEl = document.getElementById("status");
       const authEl = document.getElementById("auth");
       const settingsEl = document.getElementById("settings");
-      const userEmailEl = document.getElementById("user-email");
 
       const emailEl = document.getElementById("email");
       const passwordEl = document.getElementById("password");
@@ -304,8 +302,7 @@
         if (session) {
           authEl.classList.add("hidden");
           settingsEl.classList.remove("hidden");
-          statusEl.textContent = "Authenticated";
-          userEmailEl.textContent = session.user?.email ?? "";
+          statusEl.textContent = "";
           await loadProcesses();
         } else {
           authEl.classList.remove("hidden");
@@ -340,7 +337,7 @@
           statusEl.textContent = "Save failed: " + error.message;
           return;
         }
-        statusEl.textContent = "Saved";
+        statusEl.textContent = "";
       });
 
 
