@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>MyQ + Webhooks + Supabase V1</title>
+    <title>Automation Control Dashboard</title>
     <style>
       :root { color-scheme: light; }
       body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; margin: 0; padding: 32px; background: #f6f7f9; }
@@ -11,7 +11,7 @@
       h1 { margin-top: 0; }
       .row { margin: 12px 0; }
       label { display: block; font-weight: 600; margin-bottom: 6px; }
-      input[type="email"], input[type="password"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #d2d6dc; border-radius: 8px; }
+      input[type="email"], input[type="password"], input[type="number"], input[type="text"], select { width: 100%; padding: 10px; border: 1px solid #d2d6dc; border-radius: 8px; }
       button { padding: 10px 14px; border: none; border-radius: 8px; cursor: pointer; background: #111827; color: #fff; }
       button.secondary { background: #e5e7eb; color: #111827; }
       .status { margin: 12px 0; padding: 10px; border-radius: 8px; background: #f3f4f6; }
@@ -22,7 +22,7 @@
   </head>
   <body>
     <div class="wrap">
-      <h1>MyQ + Webhooks + Supabase V1</h1>
+      <h1>Automation Control Dashboard</h1>
       <div id="status" class="status">Checking session…</div>
 
       <section id="auth">
@@ -41,7 +41,18 @@
       </section>
 
       <section id="settings" class="hidden">
-        <h2>Garage controller settings</h2>
+        <h2>Process settings</h2>
+        <div class="row">
+          <label>Process</label>
+          <select id="process-id"></select>
+        </div>
+        <div class="row">
+          <label>Process label</label>
+          <input id="process-label" type="text" placeholder="Garage automation"/>
+        </div>
+        <div class="actions">
+          <button id="create-process" class="secondary">Create new process</button>
+        </div>
         <div class="row">
           <label><input id="enabled" type="checkbox"/> System enabled</label>
         </div>
@@ -79,25 +90,61 @@
 
       const emailEl = document.getElementById("email");
       const passwordEl = document.getElementById("password");
+      const processIdEl = document.getElementById("process-id");
+      const processLabelEl = document.getElementById("process-label");
       const enabledEl = document.getElementById("enabled");
       const closeDelayEl = document.getElementById("close_delay_min");
       const checkDelayEl = document.getElementById("check_delay_min");
       const retryDelayEl = document.getElementById("retry_delay_min");
+      let currentProcessId = "global";
 
       async function loadSettings() {
         const { data, error } = await supabase
           .from("garage_settings")
-          .select("enabled,close_delay_min,check_delay_min,retry_delay_min")
-          .eq("id", "global")
+          .select("*")
+          .eq("id", currentProcessId)
           .single();
         if (error) {
           statusEl.textContent = "Failed to load settings: " + error.message;
           return;
         }
+        processLabelEl.value = data.label ?? data.id ?? "";
         enabledEl.checked = data.enabled ?? true;
         closeDelayEl.value = data.close_delay_min ?? 10;
         checkDelayEl.value = data.check_delay_min ?? 1;
         retryDelayEl.value = data.retry_delay_min ?? 4;
+      }
+
+      function renderProcessSelect(processes) {
+        processIdEl.innerHTML = "";
+        processes.forEach((process) => {
+          const option = document.createElement("option");
+          option.value = process.id;
+          option.textContent = process.label ?? process.id;
+          processIdEl.appendChild(option);
+        });
+        if (processes.length) {
+          if (!processes.find((p) => p.id === currentProcessId)) {
+            currentProcessId = processes[0].id;
+          }
+          processIdEl.value = currentProcessId;
+        }
+      }
+
+      async function loadProcesses() {
+        const { data, error } = await supabase
+          .from("garage_settings")
+          .select("*")
+          .order("label", { ascending: true });
+        if (error) {
+          statusEl.textContent = "Failed to load processes: " + error.message;
+          return;
+        }
+        const processes = data ?? [];
+        renderProcessSelect(processes);
+        if (processes.length) {
+          await loadSettings();
+        }
       }
 
       async function refreshSession() {
@@ -108,7 +155,7 @@
           settingsEl.classList.remove("hidden");
           statusEl.textContent = "Authenticated";
           userEmailEl.textContent = session.user?.email ?? "";
-          await loadSettings();
+          await loadProcesses();
         } else {
           authEl.classList.remove("hidden");
           settingsEl.classList.add("hidden");
@@ -129,7 +176,8 @@
 
       document.getElementById("save").addEventListener("click", async () => {
         const payload = {
-          id: "global",
+          id: currentProcessId,
+          label: processLabelEl.value.trim() || currentProcessId,
           enabled: enabledEl.checked,
           close_delay_min: Number(closeDelayEl.value || 10),
           check_delay_min: Number(checkDelayEl.value || 1),
@@ -143,6 +191,37 @@
           return;
         }
         statusEl.textContent = "Saved";
+      });
+
+      processIdEl.addEventListener("change", async (event) => {
+        currentProcessId = event.target.value;
+        await loadSettings();
+      });
+
+      document.getElementById("create-process").addEventListener("click", async () => {
+        const newId = prompt("New process id (no spaces)", "garage_v1");
+        if (!newId) {
+          return;
+        }
+        const newLabel = prompt("Process label", newId) || newId;
+        const payload = {
+          id: newId,
+          label: newLabel,
+          enabled: true,
+          close_delay_min: Number(closeDelayEl.value || 10),
+          check_delay_min: Number(checkDelayEl.value || 1),
+          retry_delay_min: Number(retryDelayEl.value || 4),
+        };
+        const { error } = await supabase
+          .from("garage_settings")
+          .upsert(payload, { onConflict: "id" });
+        if (error) {
+          statusEl.textContent = "Create failed: " + error.message;
+          return;
+        }
+        currentProcessId = newId;
+        await loadProcesses();
+        statusEl.textContent = "Created";
       });
 
       document.getElementById("logout").addEventListener("click", async () => {
