@@ -453,6 +453,7 @@
           </div>
           <div class="row-inline">
             <div id="pos-summary-freshness" class="pill unknown">Freshness</div>
+            <div id="pos-run-status" class="pill unknown">Last run</div>
           </div>
           <div id="pos-summary-metrics" class="state-metrics"></div>
           <div class="meta" id="pos-summary-note"></div>
@@ -516,6 +517,7 @@
       const posStatsListEl = document.getElementById("pos-stats-list");
       const posStatsRangeEl = document.getElementById("pos-stats-range");
       const posStatsNoteEl = document.getElementById("pos-stats-note");
+      const posRunStatusEl = document.getElementById("pos-run-status");
       const viewEventsEl = document.getElementById("view-events");
       const viewStateEl = document.getElementById("view-state");
       const viewGarageEl = document.getElementById("view-garage");
@@ -776,11 +778,18 @@
           .select("readiness_score,updated_at,sleep_source,weight_source,sleep_updated_at,weight_updated_at")
           .eq("id", "global")
           .maybeSingle();
+        const runReq = supabase
+          .from("pos_runs")
+          .select("ran_at,ok")
+          .order("ran_at", { ascending: false })
+          .limit(1);
 
-        const [{ data: training, error: trainingError }, { data: readiness }] = await Promise.all([
+        const [{ data: training, error: trainingError }, { data: readiness }, { data: runData }] = await Promise.all([
           trainingReq,
           readinessReq,
+          runReq,
         ]);
+        const runRow = Array.isArray(runData) && runData.length ? runData[0] : null;
 
         if (trainingError) {
           if (posSummaryNoteEl) posSummaryNoteEl.textContent = "Training summary unavailable.";
@@ -831,6 +840,20 @@
             posSummaryFreshnessEl.textContent = hasStale ? "Needs attention" : "Fresh";
             posSummaryFreshnessEl.classList.remove("unknown", "ontrack", "soon", "overdue");
             posSummaryFreshnessEl.classList.add(hasStale ? "overdue" : "ontrack");
+          }
+        }
+
+        if (posRunStatusEl) {
+          if (runRow?.ran_at) {
+            const ranAt = formatTimestamp(runRow.ran_at);
+            const ok = runRow.ok !== false;
+            posRunStatusEl.textContent = ok ? `Last run OK · ${ranAt}` : `Last run failed · ${ranAt}`;
+            posRunStatusEl.classList.remove("unknown", "ontrack", "soon", "overdue");
+            posRunStatusEl.classList.add(ok ? "ontrack" : "overdue");
+          } else {
+            posRunStatusEl.textContent = "Last run unknown";
+            posRunStatusEl.classList.remove("ontrack", "soon", "overdue");
+            posRunStatusEl.classList.add("unknown");
           }
         }
       }
