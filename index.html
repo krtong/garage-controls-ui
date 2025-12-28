@@ -465,6 +465,14 @@
           <div id="pos-plan-body" class="list"></div>
           <div class="meta" id="pos-plan-note"></div>
         </div>
+        <div id="pos-stats" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Weekly averages</div>
+            <div class="meta" id="pos-stats-range">—</div>
+          </div>
+          <div id="pos-stats-list" class="list"></div>
+          <div class="meta" id="pos-stats-note"></div>
+        </div>
         <div class="actions">
           <button id="logout" class="secondary">Sign out</button>
         </div>
@@ -504,6 +512,10 @@
       const posPlanBodyEl = document.getElementById("pos-plan-body");
       const posPlanDateEl = document.getElementById("pos-plan-date");
       const posPlanNoteEl = document.getElementById("pos-plan-note");
+      const posStatsEl = document.getElementById("pos-stats");
+      const posStatsListEl = document.getElementById("pos-stats-list");
+      const posStatsRangeEl = document.getElementById("pos-stats-range");
+      const posStatsNoteEl = document.getElementById("pos-stats-note");
       const viewEventsEl = document.getElementById("view-events");
       const viewStateEl = document.getElementById("view-state");
       const viewGarageEl = document.getElementById("view-garage");
@@ -835,6 +847,7 @@
         viewPosEl.classList.toggle("active", system === "pos");
         if (posSummaryEl) posSummaryEl.classList.toggle("hidden", system !== "pos");
         if (posPlanEl) posPlanEl.classList.toggle("hidden", system !== "pos");
+        if (posStatsEl) posStatsEl.classList.toggle("hidden", system !== "pos");
         if (dataListEl) dataListEl.classList.toggle("hidden", system !== "garage");
         if (dataStatusEl) dataStatusEl.classList.toggle("hidden", system !== "garage");
         if (loadMoreEventsEl) loadMoreEventsEl.classList.toggle("hidden", system !== "garage");
@@ -1030,6 +1043,7 @@
         if (currentSystem === "pos") {
           await loadPosSummary();
           await loadPosPlan();
+          await loadPosStats();
           return;
         }
         if (currentDataView === "state") {
@@ -1098,6 +1112,174 @@
         item.className = "list-item";
         item.innerHTML = `<div class="list-title">${title}</div><div class="list-meta">${value}</div>`;
         return item;
+      }
+
+      function renderStatList(title, value, meta) {
+        const item = document.createElement("div");
+        item.className = "list-item";
+        item.innerHTML = `
+          <div class="list-title">${title}</div>
+          <div class="list-meta">${value}</div>
+          ${meta ? `<div class="list-row">${meta}</div>` : ""}
+        `;
+        return item;
+      }
+
+      function startOfWeekSunday(date) {
+        const start = new Date(date);
+        const day = start.getDay();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - day);
+        return start;
+      }
+
+      function daysSinceSunday(date) {
+        const day = date.getDay();
+        return Math.max(1, day);
+      }
+
+      function formatNumber(value, decimals = 0) {
+        if (value === null || value === undefined || Number.isNaN(value)) return "—";
+        return Number(value).toFixed(decimals);
+      }
+
+      function formatMiles(meters) {
+        if (!meters || Number.isNaN(meters)) return null;
+        return meters / 1609.34;
+      }
+
+      function formatYards(meters) {
+        if (!meters || Number.isNaN(meters)) return null;
+        return meters * 1.09361;
+      }
+
+      async function loadPosStats() {
+        if (!posStatsListEl) return;
+        posStatsListEl.innerHTML = "";
+        if (posStatsNoteEl) posStatsNoteEl.textContent = "";
+
+        const now = new Date();
+        const weekStart = startOfWeekSunday(now);
+        const daysElapsed = daysSinceSunday(now);
+        const weekStartIso = weekStart.toISOString();
+        if (posStatsRangeEl) {
+          posStatsRangeEl.textContent = `Since ${weekStart.toLocaleDateString()} (${daysElapsed} day${daysElapsed === 1 ? "" : "s"})`;
+        }
+
+        const [stravaResp, healthResp] = await Promise.all([
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "strava")
+            .eq("event_type", "activity")
+            .gte("event_timestamp", weekStartIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "apple_health")
+            .eq("event_type", "health_metric")
+            .gte("event_timestamp", weekStartIso),
+        ]);
+
+        let rideMeters = 0;
+        let swimMeters = 0;
+        let exerciseSeconds = 0;
+        if (stravaResp.data) {
+          stravaResp.data.forEach((row) => {
+            const payload = row.payload || {};
+            const distance = Number(payload.distance_m ?? payload.distance ?? 0);
+            const duration = Number(payload.elapsed_s ?? payload.elapsed_time ?? payload.duration_s ?? 0);
+            const typeRaw = payload.type ?? payload.activity_type ?? payload.sport_type ?? payload.workout_type ?? "";
+            const type = String(typeRaw).toLowerCase();
+            if (!Number.isNaN(distance) && distance > 0) {
+              if (type.includes("swim")) {
+                swimMeters += distance;
+              } else if (type.includes("ride") || type.includes("cycle") || type.includes("bike")) {
+                rideMeters += distance;
+              }
+            }
+            if (!Number.isNaN(duration) && duration > 0) {
+              exerciseSeconds += duration;
+            }
+          });
+        }
+
+        let steps = 0;
+        let activeCalories = 0;
+        let restingCalories = 0;
+        let exerciseMinutes = 0;
+        if (healthResp.data) {
+          healthResp.data.forEach((row) => {
+            const payload = row.payload || {};
+            const metricRaw = payload.metric ?? payload.value1 ?? "";
+            const metric = String(metricRaw).toLowerCase();
+            const value = Number(payload.value ?? payload.value2 ?? payload.amount ?? 0);
+            if (Number.isNaN(value)) return;
+            if (["steps", "step_count", "stepcount"].includes(metric)) {
+              steps += value;
+            } else if (["active_calories", "active_energy", "active_energy_burned", "active_calorie"].includes(metric)) {
+              activeCalories += value;
+            } else if (["resting_calories", "basal_energy", "basal_calories", "resting_energy", "bmr"].includes(metric)) {
+              restingCalories += value;
+            } else if (["exercise_minutes", "exercise_time", "apple_exercise_time"].includes(metric)) {
+              exerciseMinutes += value;
+            }
+          });
+        }
+
+        const milesTotal = formatMiles(rideMeters);
+        const yardsTotal = formatYards(swimMeters);
+        const hoursTotal = exerciseMinutes > 0 ? exerciseMinutes / 60 : exerciseSeconds / 3600;
+        const caloriesEaten = null;
+
+        const stats = [
+          {
+            label: "Miles ridden",
+            total: milesTotal,
+            unit: "mi",
+          },
+          {
+            label: "Yards swam",
+            total: yardsTotal,
+            unit: "yd",
+          },
+          {
+            label: "Steps",
+            total: steps,
+            unit: "steps",
+          },
+          {
+            label: "Resting calories",
+            total: restingCalories,
+            unit: "kcal",
+          },
+          {
+            label: "Active calories",
+            total: activeCalories,
+            unit: "kcal",
+          },
+          {
+            label: "Exercise hours",
+            total: hoursTotal,
+            unit: "hrs",
+          },
+        ];
+
+        stats.forEach((stat) => {
+          if (stat.total === null || stat.total === undefined || Number.isNaN(stat.total) || stat.total === 0) {
+            posStatsListEl.appendChild(renderStatList(stat.label, "—", "No data yet"));
+            return;
+          }
+          const avg = stat.total / daysElapsed;
+          const decimals = stat.unit === "steps" ? 0 : 1;
+          const avgLabel = `${formatNumber(avg, decimals)} ${stat.unit}/day`;
+          const totalLabel = `Total: ${formatNumber(stat.total, decimals)} ${stat.unit}`;
+          posStatsListEl.appendChild(renderStatList(stat.label, avgLabel, totalLabel));
+        });
+
+        if (caloriesEaten === null && posStatsNoteEl) {
+          posStatsNoteEl.textContent = "Calories eaten not connected (needs LoseIt or equivalent).";
+        }
       }
 
       async function loadPosPlan() {
