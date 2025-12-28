@@ -287,6 +287,14 @@
             <label>Retry delay (minutes)</label>
             <input id="retry_delay_min" type="number" min="1" value="4" inputmode="numeric"/>
           </div>
+          <div class="row">
+            <label>Close cooldown (seconds)</label>
+            <input id="close_cooldown_sec" type="number" min="10" value="60" inputmode="numeric"/>
+          </div>
+          <div class="row">
+            <label>Lock TTL (seconds)</label>
+            <input id="lock_ttl_sec" type="number" min="10" value="55" inputmode="numeric"/>
+          </div>
         </div>
 
         <div class="actions">
@@ -336,6 +344,8 @@
       const closeDelayEl = document.getElementById("close_delay_min");
       const checkDelayEl = document.getElementById("check_delay_min");
       const retryDelayEl = document.getElementById("retry_delay_min");
+      const closeCooldownEl = document.getElementById("close_cooldown_sec");
+      const lockTtlEl = document.getElementById("lock_ttl_sec");
       const saveStatusEl = document.getElementById("save-status");
       const dataListEl = document.getElementById("data-list");
       const dataStatusEl = document.getElementById("data-status");
@@ -363,6 +373,8 @@
         closeDelayEl.value = data.close_delay_min ?? 10;
         checkDelayEl.value = data.check_delay_min ?? 1;
         retryDelayEl.value = data.retry_delay_min ?? 4;
+        closeCooldownEl.value = data.close_cooldown_sec ?? 60;
+        lockTtlEl.value = data.lock_ttl_sec ?? 55;
       }
 
       function renderProcessTabs(processes) {
@@ -451,6 +463,8 @@
           close_delay_min: Number(closeDelayEl.value || 10),
           check_delay_min: Number(checkDelayEl.value || 1),
           retry_delay_min: Number(retryDelayEl.value || 4),
+          close_cooldown_sec: Number(closeCooldownEl.value || 60),
+          lock_ttl_sec: Number(lockTtlEl.value || 55),
         };
         const { error } = await supabase
           .from("garage_settings")
