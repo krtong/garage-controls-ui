@@ -1230,7 +1230,7 @@
           posStatsRangeEl.textContent = `Since ${weekStart.toLocaleDateString()} (${daysElapsed} day${daysElapsed === 1 ? "" : "s"})`;
         }
 
-        const [stravaResp, healthResp] = await Promise.all([
+        const [stravaResp, healthResp, nutritionResp] = await Promise.all([
           supabase
             .from("pos_events")
             .select("event_timestamp,payload")
@@ -1242,6 +1242,11 @@
             .select("event_timestamp,payload")
             .eq("source", "apple_health")
             .eq("event_type", "health_metric")
+            .gte("event_timestamp", weekStartIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "nutrition")
             .gte("event_timestamp", weekStartIso),
         ]);
 
@@ -1294,7 +1299,27 @@
         const milesTotal = formatMiles(rideMeters);
         const yardsTotal = formatYards(swimMeters);
         const hoursTotal = exerciseMinutes > 0 ? exerciseMinutes / 60 : exerciseSeconds / 3600;
-        const caloriesEaten = null;
+        let caloriesEaten = 0;
+        let proteinG = 0;
+        let carbsG = 0;
+        let fatG = 0;
+        if (nutritionResp.data) {
+          nutritionResp.data.forEach((row) => {
+            const payload = row.payload || {};
+            const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? payload.value1 ?? 0);
+            const protein = Number(payload.protein_g ?? payload.protein ?? 0);
+            const carbs = Number(payload.carbs_g ?? payload.carbs ?? 0);
+            const fat = Number(payload.fat_g ?? payload.fat ?? 0);
+            if (!Number.isNaN(calories) && calories > 0) caloriesEaten += calories;
+            if (!Number.isNaN(protein) && protein > 0) proteinG += protein;
+            if (!Number.isNaN(carbs) && carbs > 0) carbsG += carbs;
+            if (!Number.isNaN(fat) && fat > 0) fatG += fat;
+          });
+        }
+        if (caloriesEaten <= 0) caloriesEaten = null;
+        if (proteinG <= 0) proteinG = null;
+        if (carbsG <= 0) carbsG = null;
+        if (fatG <= 0) fatG = null;
 
         const stats = [
           {
@@ -1327,6 +1352,26 @@
             total: hoursTotal,
             unit: "hrs",
           },
+          {
+            label: "Calories eaten",
+            total: caloriesEaten,
+            unit: "kcal",
+          },
+          {
+            label: "Protein",
+            total: proteinG,
+            unit: "g",
+          },
+          {
+            label: "Carbs",
+            total: carbsG,
+            unit: "g",
+          },
+          {
+            label: "Fat",
+            total: fatG,
+            unit: "g",
+          },
         ];
 
         stats.forEach((stat) => {
@@ -1341,8 +1386,8 @@
           posStatsListEl.appendChild(renderStatList(stat.label, avgLabel, totalLabel));
         });
 
-        if (caloriesEaten === null && posStatsNoteEl) {
-          posStatsNoteEl.textContent = "Calories eaten not connected (needs LoseIt or equivalent).";
+        if (!nutritionResp.data?.length && posStatsNoteEl) {
+          posStatsNoteEl.textContent = "Nutrition not connected yet.";
         }
       }
 
