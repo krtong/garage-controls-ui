@@ -478,6 +478,7 @@
 
       const POS_PROCESS_ID = "personal_ops";
       const posDashboardUrl = "personal_ops.html";
+      const SESSION_STORAGE_KEY = "ifttt_dashboard_session";
       let currentProcessId = "global";
       let currentDataView = "events";
       const DOORS = ["Left", "Middle", "Right"];
@@ -500,6 +501,41 @@
         retryDelayEl.value = data.retry_delay_min ?? 4;
         closeCooldownEl.value = data.close_cooldown_sec ?? 60;
         lockTtlEl.value = data.lock_ttl_sec ?? 55;
+      }
+
+      async function stashSessionForNav() {
+        try {
+          const { data } = await supabase.auth.getSession();
+          const session = data?.session;
+          if (session?.access_token && session?.refresh_token) {
+            sessionStorage.setItem(
+              SESSION_STORAGE_KEY,
+              JSON.stringify({
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+              }),
+            );
+          }
+        } catch (_) {
+          // best-effort only
+        }
+      }
+
+      async function restoreSessionFromStorage() {
+        const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (!raw) return false;
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        try {
+          const payload = JSON.parse(raw);
+          if (!payload?.access_token || !payload?.refresh_token) return false;
+          const { data, error } = await supabase.auth.setSession({
+            access_token: payload.access_token,
+            refresh_token: payload.refresh_token,
+          });
+          return Boolean(data?.session) && !error;
+        } catch (_) {
+          return false;
+        }
       }
 
       function renderProcessTabs(processes) {
@@ -528,7 +564,8 @@
         posButton.className = "process-tab";
         posButton.textContent = "Personal Ops";
         posButton.dataset.processId = POS_PROCESS_ID;
-        posButton.addEventListener("click", () => {
+        posButton.addEventListener("click", async () => {
+          await stashSessionForNav();
           window.location.href = posDashboardUrl;
         });
         processTabsEl.appendChild(posButton);
@@ -555,8 +592,13 @@
       }
 
       async function refreshSession() {
-        const { data } = await supabase.auth.getSession();
-        const session = data?.session;
+        let { data } = await supabase.auth.getSession();
+        let session = data?.session;
+        if (!session) {
+          await restoreSessionFromStorage();
+          const refreshed = await supabase.auth.getSession();
+          session = refreshed.data?.session;
+        }
         if (session) {
           authEl.classList.add("hidden");
           settingsEl.classList.remove("hidden");
