@@ -584,11 +584,14 @@
           .from("garage_settings")
           .select("*")
           .order("label", { ascending: true });
+        let processes = data ?? [];
         if (error) {
           if (saveStatusEl) saveStatusEl.textContent = "Failed to load processes: " + error.message;
-          return;
+          processes = [];
         }
-        const processes = data ?? [];
+        if (!processes.length) {
+          processes = [{ id: "global", label: "Garage Controller" }];
+        }
         processes.push({ id: POS_PROCESS_ID, label: "Personal Ops" });
         renderProcessTabs(processes);
         if (processes.length) {
