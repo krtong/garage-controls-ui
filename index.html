@@ -172,6 +172,82 @@
         display: grid;
         gap: 10px;
       }
+      .state-grid {
+        display: grid;
+        gap: 12px;
+      }
+      @media (min-width: 680px) {
+        .state-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      .state-card {
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.7);
+        display: grid;
+        gap: 10px;
+      }
+      .state-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .state-door {
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .state-badge {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+      }
+      .state-badge.open {
+        background: rgba(248, 113, 113, 0.16);
+        border-color: rgba(248, 113, 113, 0.45);
+        color: #fca5a5;
+      }
+      .state-badge.closed {
+        background: rgba(52, 211, 153, 0.16);
+        border-color: rgba(52, 211, 153, 0.45);
+        color: #86efac;
+      }
+      .state-badge.unknown {
+        background: rgba(148, 163, 184, 0.16);
+        border-color: rgba(148, 163, 184, 0.3);
+        color: var(--muted);
+      }
+      .state-metrics {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .state-metric {
+        background: rgba(12, 18, 34, 0.7);
+        border: 1px solid rgba(42, 51, 82, 0.5);
+        border-radius: 12px;
+        padding: 8px 10px;
+      }
+      .state-metric span {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+      .state-metric strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 600;
+      }
       .list-item {
         padding: 12px;
         border-radius: 12px;
@@ -505,6 +581,24 @@
         }, 2000);
       }
 
+      function formatDuration(ms) {
+        if (!ms || ms < 0) return "—";
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        if (days > 0) return `${days}d ${hours % 24}h`;
+        if (hours > 0) return `${hours}h ${minutes % 60}m`;
+        return `${minutes}m`;
+      }
+
+      function formatAction(action) {
+        if (!action) return "—";
+        return String(action)
+          .replace(/_/g, " ")
+          .replace(/\\b\\w/g, (c) => c.toUpperCase());
+      }
+
       function formatTimestamp(value) {
         if (!value) return "—";
         const date = new Date(value);
@@ -526,6 +620,7 @@
 
       async function loadEvents() {
         dataListEl.innerHTML = "";
+        dataListEl.className = "list";
         if (dataStatusEl) dataStatusEl.textContent = "Loading…";
         const { data, error } = await supabase
           .from("garage_events")
@@ -565,10 +660,11 @@
 
       async function loadState() {
         dataListEl.innerHTML = "";
+        dataListEl.className = "list state-grid";
         if (dataStatusEl) dataStatusEl.textContent = "Loading…";
         const { data, error } = await supabase
           .from("garage_state")
-          .select("door,is_open,session_start,last_open,last_close,next_action,next_action_at")
+          .select("door,is_open,session_start,last_open,last_close,next_action,next_action_at,last_close_attempt_at,updated_at")
           .order("door", { ascending: true });
         if (error) {
           if (dataStatusEl) dataStatusEl.textContent = "Failed to load state: " + error.message;
@@ -585,23 +681,63 @@
             byDoor[row.door] = row;
           }
         });
+        const now = new Date();
         DOORS.forEach((door) => {
           const row = byDoor[door] || {};
-          const item = document.createElement("div");
-          item.className = "list-item";
-          const title = document.createElement("div");
-          title.className = "list-title";
+          const hasData = Boolean(row.door);
           const isOpen = row.is_open === true;
-          title.textContent = `${door} • ${row.door ? (isOpen ? "OPEN" : "CLOSED") : "NO DATA"}`;
-          const meta = document.createElement("div");
-          meta.className = "list-meta";
-          const nextLine = `next: ${row.next_action ?? "—"} @ ${formatTimestamp(row.next_action_at)}`;
-          const lastOpenLine = `last open: ${formatTimestamp(row.last_open)}`;
-          const lastCloseLine = `last close: ${formatTimestamp(row.last_close)}`;
-          meta.innerHTML = [nextLine, lastOpenLine, lastCloseLine].join("<br/>");
-          item.appendChild(title);
-          item.appendChild(meta);
-          dataListEl.appendChild(item);
+          const sessionStart = row.session_start ? new Date(row.session_start) : null;
+          const lastClose = row.last_close ? new Date(row.last_close) : null;
+
+          let ageLabel = "Open for";
+          let ageValue = "—";
+          if (hasData && isOpen && sessionStart && !Number.isNaN(sessionStart.getTime())) {
+            ageValue = formatDuration(now.getTime() - sessionStart.getTime());
+          } else if (hasData && !isOpen && lastClose && !Number.isNaN(lastClose.getTime())) {
+            ageLabel = "Closed for";
+            ageValue = formatDuration(now.getTime() - lastClose.getTime());
+          }
+
+          const statusText = hasData ? (isOpen ? "OPEN" : "CLOSED") : "NO DATA";
+          const statusClass = hasData ? (isOpen ? "open" : "closed") : "unknown";
+          const lastEventLabel = hasData ? (isOpen ? "Opened" : "Closed") : "Last event";
+          const lastEventTime = isOpen ? row.last_open || row.session_start : row.last_close;
+
+          const card = document.createElement("div");
+          card.className = "state-card";
+          card.innerHTML = `
+            <div class="state-header">
+              <div class="state-door">${door}</div>
+              <div class="state-badge ${statusClass}">${statusText}</div>
+            </div>
+            <div class="state-metrics">
+              <div class="state-metric">
+                <span>${lastEventLabel}</span>
+                <strong>${formatTimestamp(lastEventTime)}</strong>
+              </div>
+              <div class="state-metric">
+                <span>${ageLabel}</span>
+                <strong>${ageValue}</strong>
+              </div>
+              <div class="state-metric">
+                <span>Next action</span>
+                <strong>${formatAction(row.next_action)}</strong>
+              </div>
+              <div class="state-metric">
+                <span>Next at</span>
+                <strong>${formatTimestamp(row.next_action_at)}</strong>
+              </div>
+              <div class="state-metric">
+                <span>Last attempt</span>
+                <strong>${formatTimestamp(row.last_close_attempt_at)}</strong>
+              </div>
+              <div class="state-metric">
+                <span>Updated</span>
+                <strong>${formatTimestamp(row.updated_at)}</strong>
+              </div>
+            </div>
+          `;
+          dataListEl.appendChild(card);
         });
       }
 
