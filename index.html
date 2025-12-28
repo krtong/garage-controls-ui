@@ -512,6 +512,7 @@
 
       const SUPABASE_URL = "https://tbrnarytcojngpbzzwcn.supabase.co";
       const SUPABASE_ANON_KEY = "sb_publishable_E8-dvNNh5V3VQLAcK-xqiQ_dLEu1Bsh";
+      const AGENT_INBOX_URL = "";
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const authEl = document.getElementById("auth");
@@ -1212,15 +1213,30 @@
         if (agentStatusEl) agentStatusEl.textContent = "Sending…";
         const { data: userData } = await supabase.auth.getUser();
         const sender = userData?.user?.email ?? "user";
+        let directOk = false;
+        if (AGENT_INBOX_URL) {
+          try {
+            const resp = await fetch(AGENT_INBOX_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sender, body }),
+            });
+            directOk = resp.ok;
+          } catch (_) {
+            directOk = false;
+          }
+        }
         const { error } = await supabase
           .from("agent_messages")
-          .insert({ sender, body, status: "pending" });
+          .insert({ sender, body, status: "pending", meta: { direct_sent: directOk } });
         if (error) {
           if (agentStatusEl) agentStatusEl.textContent = "Failed to send message.";
           return;
         }
         if (agentBodyEl) agentBodyEl.value = "";
-        if (agentStatusEl) agentStatusEl.textContent = "Message queued.";
+        if (agentStatusEl) {
+          agentStatusEl.textContent = directOk ? "Sent to agent." : "Queued in inbox.";
+        }
         await loadAgentMessages();
       }
 
