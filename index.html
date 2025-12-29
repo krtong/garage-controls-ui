@@ -1400,6 +1400,7 @@
         const { data, error } = await supabase
           .from("coach_plan_daily")
           .select("date,summary_text,plan_json,created_at")
+          .lte("date", dateKey)
           .order("date", { ascending: false })
           .limit(1);
         if (error || !data || !data.length) {
