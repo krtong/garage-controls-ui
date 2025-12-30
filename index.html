@@ -407,6 +407,34 @@
         color: #fda4af;
         background: rgba(244, 63, 94, 0.15);
       }
+      .confidence-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        color: var(--muted);
+        background: rgba(15, 23, 42, 0.6);
+      }
+      .confidence-chip.good {
+        border-color: rgba(52, 211, 153, 0.5);
+        color: #86efac;
+        background: rgba(52, 211, 153, 0.12);
+      }
+      .confidence-chip.warn {
+        border-color: rgba(248, 171, 111, 0.55);
+        color: #fdba74;
+        background: rgba(249, 115, 22, 0.15);
+      }
+      .confidence-chip.bad {
+        border-color: rgba(248, 113, 113, 0.55);
+        color: #fda4af;
+        background: rgba(244, 63, 94, 0.15);
+      }
       .bar {
         width: 100%;
         height: 6px;
@@ -1041,6 +1069,7 @@
                 <div id="pos-summary-metrics" class="kpi-grid"></div>
                 <div class="meta" id="pos-summary-note"></div>
                 <div id="pos-summary-drivers" class="chip-row"></div>
+                <div id="pos-summary-confidence" class="confidence-chip"></div>
               </div>
               <div id="pos-plan" class="pos-plan-panel hidden" data-importance="10" data-group="action" data-related="recommendation,intensity,duration,reason">
                 <div class="row-inline">
@@ -1077,6 +1106,20 @@
                 <div id="pos-strava-list" class="list"></div>
                 <div id="pos-strava-chart" class="chart"></div>
               </div>
+              <div id="pos-load-capacity" class="pos-section hidden" data-pos-view="overview training" data-importance="8" data-group="load_capacity" data-related="training_load,capacity">
+                <div class="row-inline">
+                  <div style="font-weight:600;">Load vs capacity</div>
+                  <div class="meta" id="pos-load-capacity-note">—</div>
+                </div>
+                <div id="pos-load-capacity-list" class="list"></div>
+              </div>
+              <div id="pos-weekly-load" class="pos-section hidden" data-pos-view="overview training" data-importance="7" data-group="weekly_load" data-related="training_load,weekly">
+                <div class="row-inline">
+                  <div style="font-weight:600;">Weekly load</div>
+                  <div class="meta" id="pos-weekly-load-note">—</div>
+                </div>
+                <div id="pos-weekly-load-chart" class="chart"></div>
+              </div>
               <div id="pos-relations" class="pos-section hidden" data-pos-view="overview training nutrition sleep" data-importance="8" data-group="relationships" data-related="load,sleep,nutrition,strength_quality">
                 <div class="row-inline">
                   <div style="font-weight:600;">Signals in context</div>
@@ -1102,6 +1145,13 @@
                     <div class="meta" id="pos-recovery-note">—</div>
                   </div>
                   <div id="pos-recovery-list" class="list"></div>
+                </div>
+                <div id="pos-data-health" class="pos-panel hidden" data-pos-view="overview data" data-importance="9" data-group="data_health" data-related="coverage,stale,confidence">
+                  <div class="row-inline">
+                    <div style="font-weight:600;">Data health</div>
+                    <div class="meta" id="pos-data-health-note">—</div>
+                  </div>
+                  <div id="pos-data-health-list" class="list"></div>
                 </div>
                 <div id="pos-nutrition" class="pos-panel hidden" data-pos-view="overview nutrition" data-importance="7" data-group="fuel" data-related="calories,protein,carbs,fat">
                   <div class="row-inline">
@@ -1244,6 +1294,7 @@
       const posSummaryFreshnessEl = document.getElementById("pos-summary-freshness");
       const posSummaryNoteEl = document.getElementById("pos-summary-note");
       const posSummaryDriversEl = document.getElementById("pos-summary-drivers");
+      const posSummaryConfidenceEl = document.getElementById("pos-summary-confidence");
       const posRangeEl = document.getElementById("pos-range");
       const posRecoveryEl = document.getElementById("pos-recovery");
       const posRecoveryListEl = document.getElementById("pos-recovery-list");
@@ -1252,6 +1303,12 @@
       const posStravaListEl = document.getElementById("pos-strava-list");
       const posStravaNoteEl = document.getElementById("pos-strava-note");
       const posStravaChartEl = document.getElementById("pos-strava-chart");
+      const posLoadCapacityEl = document.getElementById("pos-load-capacity");
+      const posLoadCapacityListEl = document.getElementById("pos-load-capacity-list");
+      const posLoadCapacityNoteEl = document.getElementById("pos-load-capacity-note");
+      const posWeeklyLoadEl = document.getElementById("pos-weekly-load");
+      const posWeeklyLoadChartEl = document.getElementById("pos-weekly-load-chart");
+      const posWeeklyLoadNoteEl = document.getElementById("pos-weekly-load-note");
       const posRelationsEl = document.getElementById("pos-relations");
       const posRelationsListEl = document.getElementById("pos-relations-list");
       const posRelationsNoteEl = document.getElementById("pos-relations-note");
@@ -1286,6 +1343,9 @@
       const posNutritionEl = document.getElementById("pos-nutrition");
       const posNutritionListEl = document.getElementById("pos-nutrition-list");
       const posNutritionNoteEl = document.getElementById("pos-nutrition-note");
+      const posDataHealthEl = document.getElementById("pos-data-health");
+      const posDataHealthListEl = document.getElementById("pos-data-health-list");
+      const posDataHealthNoteEl = document.getElementById("pos-data-health-note");
       const posBaselinesEl = document.getElementById("pos-baselines");
       const posBaselinesListEl = document.getElementById("pos-baselines-list");
       const posBaselinesNoteEl = document.getElementById("pos-baselines-note");
@@ -1667,6 +1727,7 @@
       async function loadPosSummary() {
         if (!posSummaryMetricsEl || !posSummaryEl) return;
         if (posSummaryNoteEl) posSummaryNoteEl.textContent = "";
+        if (posSummaryConfidenceEl) posSummaryConfidenceEl.textContent = "";
         posSummaryMetricsEl.innerHTML = "";
 
         const trainingReq = supabase
@@ -1872,6 +1933,28 @@
           });
         }
 
+        if (posSummaryConfidenceEl) {
+          let confidence = 100;
+          if (sleepAge == null || sleepAge >= 2) confidence -= 25;
+          if (weightAge == null || weightAge >= 7) confidence -= 15;
+          if (nutritionDaysCount === 0) confidence -= 15;
+          if (latestForm == null) confidence -= 10;
+          if (!training?.updated_at) confidence -= 10;
+          confidence = Math.max(0, Math.min(100, confidence));
+          let tone = "good";
+          let label = "High confidence";
+          if (confidence < 60) {
+            tone = "bad";
+            label = "Low confidence";
+          } else if (confidence < 80) {
+            tone = "warn";
+            label = "Medium confidence";
+          }
+          posSummaryConfidenceEl.className = `confidence-chip ${tone}`;
+          posSummaryConfidenceEl.textContent = `${label} · ${confidence}%`;
+          attachMeta(posSummaryConfidenceEl, { importance: 9, group: "confidence", related: "coverage,stale" });
+        }
+
         if (posRunStatusEl) {
           if (runRow?.ran_at) {
             const ranAt = formatTimestamp(runRow.ran_at);
@@ -1975,6 +2058,138 @@
               { importance: 4, group: "rhr", related: "baseline" },
             ),
           );
+        }
+      }
+
+      async function loadPosDataHealth() {
+        if (!posDataHealthListEl || !posDataHealthEl) return;
+        posDataHealthListEl.innerHTML = "";
+        if (posDataHealthNoteEl) posDataHealthNoteEl.textContent = "";
+
+        const startIso = rangeStartDate(7).toISOString();
+        const [readinessResp, trainingResp, stravaResp, strengthResp, nutritionResp, appleResp] = await Promise.all([
+          supabase
+            .from("readiness_state")
+            .select("sleep_updated_at,weight_updated_at,sleep_source,weight_source")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("training_state")
+            .select("updated_at,workout_count_7d")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("strava_fitness_daily")
+            .select("date")
+            .order("date", { ascending: false })
+            .limit(1),
+          supabase
+            .from("speediance_training_session_scores")
+            .select("session_date")
+            .order("session_date", { ascending: false })
+            .limit(1),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp")
+            .eq("source", "nutrition")
+            .gte("event_timestamp", startIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp")
+            .eq("source", "apple_health")
+            .gte("event_timestamp", startIso),
+        ]);
+
+        const readiness = readinessResp.data ?? {};
+        const training = trainingResp.data ?? {};
+        const sleepAge = formatAgeDays(readiness.sleep_updated_at);
+        const weightAge = formatAgeDays(readiness.weight_updated_at);
+        const sleepStatus = sleepAge != null && sleepAge < 2 ? "Fresh" : "Stale";
+        const sleepTone = sleepAge != null && sleepAge < 2 ? "good" : "warn";
+        const weightStatus = weightAge != null && weightAge < 7 ? "Fresh" : "Stale";
+        const weightTone = weightAge != null && weightAge < 7 ? "good" : "warn";
+
+        const nutritionDays = new Set();
+        (nutritionResp.data || []).forEach((row) => {
+          const key = dateKeyFromIso(row.event_timestamp);
+          if (key) nutritionDays.add(key);
+        });
+        const nutritionDaysCount = nutritionDays.size;
+        const nutritionTone = nutritionDaysCount >= 4 ? "good" : nutritionDaysCount >= 1 ? "warn" : "bad";
+        const nutritionStatus = nutritionDaysCount >= 4 ? "Covered" : nutritionDaysCount >= 1 ? "Sparse" : "Missing";
+
+        const appleLogs = appleResp.data?.length ?? 0;
+        const appleTone = appleLogs >= 4 ? "good" : appleLogs >= 1 ? "warn" : "bad";
+        const appleStatus = appleLogs >= 4 ? "Covered" : appleLogs >= 1 ? "Sparse" : "Missing";
+
+        const stravaDate = stravaResp.data?.[0]?.date ?? null;
+        const stravaAge = stravaDate ? formatAgeDays(`${stravaDate}T00:00:00`) : null;
+        const stravaTone = stravaAge != null && stravaAge < 7 ? "good" : "warn";
+        const stravaStatus = stravaAge != null && stravaAge < 7 ? "Fresh" : "Stale";
+
+        const strengthDate = strengthResp.data?.[0]?.session_date ?? null;
+        const strengthAge = strengthDate ? formatAgeDays(`${strengthDate}T00:00:00`) : null;
+        const strengthTone = strengthAge != null && strengthAge < 7 ? "good" : "warn";
+        const strengthStatus = strengthAge != null && strengthAge < 7 ? "Fresh" : "Stale";
+
+        posDataHealthListEl.appendChild(
+          renderStatusItem(
+            "Sleep",
+            sleepStatus,
+            sleepTone,
+            sleepAge != null ? `Updated ${formatNumber(sleepAge, 1)}d ago` : "No update yet",
+            { importance: 9, group: "data_health", related: "sleep" },
+          ),
+        );
+        posDataHealthListEl.appendChild(
+          renderStatusItem(
+            "Weight",
+            weightStatus,
+            weightTone,
+            weightAge != null ? `Updated ${formatNumber(weightAge, 1)}d ago` : "No update yet",
+            { importance: 7, group: "data_health", related: "weight" },
+          ),
+        );
+        posDataHealthListEl.appendChild(
+          renderStatusItem(
+            "Nutrition",
+            nutritionStatus,
+            nutritionTone,
+            `${nutritionDaysCount}/7 days logged`,
+            { importance: 8, group: "data_health", related: "nutrition" },
+          ),
+        );
+        posDataHealthListEl.appendChild(
+          renderStatusItem(
+            "Apple Health",
+            appleStatus,
+            appleTone,
+            `${appleLogs} logs in 7d`,
+            { importance: 6, group: "data_health", related: "apple_health" },
+          ),
+        );
+        posDataHealthListEl.appendChild(
+          renderStatusItem(
+            "Strava fitness",
+            stravaStatus,
+            stravaTone,
+            stravaDate ? `Last ${stravaDate}` : "No fitness data",
+            { importance: 7, group: "data_health", related: "strava" },
+          ),
+        );
+        posDataHealthListEl.appendChild(
+          renderStatusItem(
+            "Strength sessions",
+            strengthStatus,
+            strengthTone,
+            strengthDate ? `Last ${strengthDate}` : "No strength data",
+            { importance: 7, group: "data_health", related: "speediance" },
+          ),
+        );
+
+        if (posDataHealthNoteEl) {
+          const updatedAt = training.updated_at ? `Training updated ${formatTimestamp(training.updated_at)}` : "Training update unknown";
+          posDataHealthNoteEl.textContent = `${updatedAt} · Coverage last 7 days.`;
         }
       }
 
@@ -2189,6 +2404,117 @@
 
         if (posTrendsNoteEl) {
           posTrendsNoteEl.textContent = `Momentum signals for ${rangeLabel(currentRangeDays).toLowerCase()}.`;
+        }
+      }
+
+      async function loadPosLoadCapacity() {
+        if (!posLoadCapacityListEl || !posLoadCapacityEl) return;
+        posLoadCapacityListEl.innerHTML = "";
+        if (posLoadCapacityNoteEl) posLoadCapacityNoteEl.textContent = "";
+
+        const [trainingResp, metricsResp] = await Promise.all([
+          supabase
+            .from("training_state")
+            .select("strength_capacity_7d,updated_at")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("pos_day_metrics")
+            .select("training_load_7d,updated_at")
+            .order("date", { ascending: false })
+            .limit(1),
+        ]);
+
+        const training = trainingResp.data ?? {};
+        const metrics = metricsResp.data?.[0] ?? {};
+        const load = Number(metrics.training_load_7d ?? NaN);
+        const capacity = Number(training.strength_capacity_7d ?? NaN);
+
+        if (!Number.isNaN(load) && !Number.isNaN(capacity) && capacity > 0) {
+          posLoadCapacityListEl.appendChild(
+            renderGoalBar({
+              label: "Training load (7d)",
+              actual: load,
+              target: capacity,
+              unit: "load",
+              meta: { importance: 9, group: "load_capacity", related: "training_load,capacity" },
+            }),
+          );
+        } else if (!Number.isNaN(load)) {
+          posLoadCapacityListEl.appendChild(
+            renderStatusItem(
+              "Training load (7d)",
+              "Tracked",
+              "warn",
+              `${formatNumber(load, 0)} load · Capacity missing`,
+              { importance: 8, group: "load_capacity", related: "training_load" },
+            ),
+          );
+        } else {
+          posLoadCapacityListEl.appendChild(
+            renderStatusItem(
+              "Training load (7d)",
+              "Missing",
+              "bad",
+              "No load data yet",
+              { importance: 8, group: "load_capacity", related: "training_load" },
+            ),
+          );
+        }
+
+        if (posLoadCapacityNoteEl) {
+          const parts = [];
+          if (metrics.updated_at) parts.push(`Load updated ${formatTimestamp(metrics.updated_at)}`);
+          if (training.updated_at) parts.push(`Capacity updated ${formatTimestamp(training.updated_at)}`);
+          posLoadCapacityNoteEl.textContent = parts.length ? parts.join(" · ") : "Weekly load vs capacity";
+        }
+      }
+
+      async function loadPosWeeklyLoad() {
+        if (!posWeeklyLoadChartEl || !posWeeklyLoadEl) return;
+        posWeeklyLoadChartEl.innerHTML = "";
+        if (posWeeklyLoadNoteEl) posWeeklyLoadNoteEl.textContent = "";
+
+        const start = rangeStartDate(28);
+        const startKey = start.toISOString().slice(0, 10);
+        const { data, error } = await supabase
+          .from("pos_day_metrics")
+          .select("date,training_load_today")
+          .gte("date", startKey)
+          .order("date", { ascending: true });
+
+        if (error || !data || !data.length) {
+          if (posWeeklyLoadNoteEl) posWeeklyLoadNoteEl.textContent = "No weekly load yet.";
+          return;
+        }
+
+        const weekTotals = new Map();
+        data.forEach((row) => {
+          if (!row.date) return;
+          const weekStart = startOfWeekSunday(new Date(row.date));
+          const key = weekStart.toISOString().slice(0, 10);
+          const value = Number(row.training_load_today ?? 0);
+          weekTotals.set(key, (weekTotals.get(key) || 0) + (Number.isNaN(value) ? 0 : value));
+        });
+
+        const weeks = Array.from(weekTotals.entries())
+          .sort(([a], [b]) => (a < b ? -1 : 1))
+          .slice(-4);
+
+        const labels = weeks.map(([key]) => {
+          const date = new Date(key);
+          return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        });
+        const values = weeks.map(([, total]) => total);
+
+        posWeeklyLoadChartEl.innerHTML = renderWeeklyBars({
+          labels,
+          values,
+          avgLabel: "4wk avg",
+        });
+
+        if (posWeeklyLoadNoteEl) {
+          posWeeklyLoadNoteEl.textContent = "Weekly totals with rolling average.";
         }
       }
 
@@ -3262,9 +3588,12 @@
         if (viewId === "overview") {
           await loadPosHeatmap();
           await loadPosStravaFitness();
+          await loadPosLoadCapacity();
+          await loadPosWeeklyLoad();
           await loadPosRelations();
           await loadPosTrends();
           await loadPosRecovery();
+          await loadPosDataHealth();
           await loadPosNutrition();
           await loadPosSleepTrend();
           await loadPosSleepPlan();
@@ -3274,6 +3603,8 @@
         if (viewId === "training") {
           await loadPosHeatmap();
           await loadPosStravaFitness();
+          await loadPosLoadCapacity();
+          await loadPosWeeklyLoad();
           await loadPosRelations();
           await loadPosTrends();
           await loadPosStats();
@@ -3302,6 +3633,7 @@
           return;
         }
         if (viewId === "data") {
+          await loadPosDataHealth();
           await loadPosStats();
           await loadPosAppleHealth();
         }
@@ -3439,7 +3771,7 @@
         return item;
       }
 
-      function renderBullet({ label, actual, target, unit, meta = null }) {
+      function renderBullet({ label, actual, target, unit, coverage = "", meta = null }) {
         const safeTarget = Number(target ?? 0);
         const safeActual = Number(actual ?? 0);
         const ratio = safeTarget > 0 ? safeActual / safeTarget : 0;
@@ -3448,10 +3780,11 @@
         const tone = ratio >= 0.9 && ratio <= 1.1 ? "good" : ratio >= 0.6 ? "warn" : "bad";
         const decimals = unit === "kcal" ? 0 : 1;
         const metaText = `Avg ${formatNumber(safeActual, decimals)} ${unit} · Target ${formatNumber(safeTarget, 0)} ${unit} (${Number.isFinite(percent) ? percent : 0}%)`;
+        const coverageText = coverage ? ` · ${coverage}` : "";
 
         const item = document.createElement("div");
         item.className = "list-item";
-        item.innerHTML = `<div class="list-title">${label}</div><div class="list-meta">${metaText}</div>`;
+        item.innerHTML = `<div class="list-title">${label}</div><div class="list-meta">${metaText}${coverageText}</div>`;
         const chip = document.createElement("div");
         chip.className = `status-chip ${tone}`;
         chip.textContent = status;
@@ -3623,6 +3956,40 @@
             <text x="${padding.left}" y="${height - 10}" font-size="10" fill="#94a3b8">${startLabel}</text>
             <text x="${width - padding.right}" y="${height - 10}" text-anchor="end" font-size="10" fill="#94a3b8">${endLabel}</text>
             ${yLabel ? `<text x="12" y="${padding.top}" font-size="10" fill="#94a3b8" writing-mode="tb">${yLabel}</text>` : ""}
+          </svg>
+        `;
+      }
+
+      function renderWeeklyBars({ labels, values, avgLabel = "Avg" }) {
+        if (!labels || !labels.length) return "";
+        const width = 560;
+        const height = 200;
+        const padding = { top: 16, right: 16, bottom: 32, left: 44 };
+        const plotWidth = width - padding.left - padding.right;
+        const plotHeight = height - padding.top - padding.bottom;
+        const maxVal = Math.max(...values, 1);
+        const barWidth = plotWidth / labels.length * 0.6;
+        const gap = plotWidth / labels.length * 0.4;
+        const avg = average(values) ?? 0;
+        const avgY = padding.top + (1 - avg / maxVal) * plotHeight;
+
+        const bars = values.map((value, idx) => {
+          const x = padding.left + idx * (barWidth + gap) + gap * 0.5;
+          const barHeight = (value / maxVal) * plotHeight;
+          const y = padding.top + (plotHeight - barHeight);
+          return `
+            <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="6" fill="rgba(56,189,248,0.65)">
+              <title>${labels[idx]} · ${formatNumber(value, 0)}</title>
+            </rect>
+            <text x="${x + barWidth / 2}" y="${height - 10}" text-anchor="middle" font-size="10" fill="#94a3b8">${labels[idx]}</text>
+          `;
+        }).join("");
+
+        return `
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Weekly load bars">
+            <line x1="${padding.left}" y1="${avgY}" x2="${width - padding.right}" y2="${avgY}" stroke="rgba(34,197,94,0.6)" stroke-width="1.5" stroke-dasharray="4 4" />
+            <text x="${width - padding.right}" y="${avgY - 6}" text-anchor="end" font-size="10" fill="#86efac">${avgLabel} ${formatNumber(avg, 0)}</text>
+            ${bars}
           </svg>
         `;
       }
@@ -4061,6 +4428,7 @@
         const targets = plan?.plan_json?.nutrition_targets ?? {};
         let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
         let hasTotals = false;
+        const nutritionDays = new Set();
         if (nutritionResp.data?.length) {
           nutritionResp.data.forEach((row) => {
             const payload = row.payload || {};
@@ -4072,9 +4440,13 @@
             if (!Number.isNaN(protein) && protein > 0) totals.protein += protein;
             if (!Number.isNaN(carbs) && carbs > 0) totals.carbs += carbs;
             if (!Number.isNaN(fat) && fat > 0) totals.fat += fat;
+            const key = dateKeyFromIso(row.event_timestamp);
+            if (key) nutritionDays.add(key);
           });
           hasTotals = totals.calories + totals.protein + totals.carbs + totals.fat > 0;
         }
+        const nutritionDaysCount = nutritionDays.size;
+        const avgDivisor = nutritionDaysCount > 0 ? nutritionDaysCount : Math.max(1, currentRangeDays);
 
         if (!metrics && !targets) {
           if (posNutritionNoteEl) posNutritionNoteEl.textContent = "No nutrition data yet.";
@@ -4084,7 +4456,7 @@
         if (posNutritionNoteEl) {
           const entries = nutritionResp.data?.length ?? 0;
           const noteParts = [];
-          noteParts.push(entries ? `${entries} logs in ${rangeLabel(currentRangeDays).toLowerCase()}` : "No logs yet.");
+          noteParts.push(entries ? `${entries} logs · ${nutritionDaysCount}/7 days` : "No logs yet.");
           if (!targets?.calories_target) {
             noteParts.push("Targets missing");
           } else {
@@ -4094,10 +4466,10 @@
         }
 
         const rows = [
-          { label: "Calories", actual: hasTotals ? totals.calories / Math.max(1, currentRangeDays) : metrics?.calories_avg_day, target: targets.calories_target, unit: "kcal", meta: { importance: 8, group: "nutrition", related: "calories" } },
-          { label: "Protein", actual: hasTotals ? totals.protein / Math.max(1, currentRangeDays) : metrics?.protein_avg_day, target: targets.protein_target_g, unit: "g", meta: { importance: 8, group: "nutrition", related: "protein" } },
-          { label: "Carbs", actual: hasTotals ? totals.carbs / Math.max(1, currentRangeDays) : metrics?.carbs_avg_day, target: targets.carbs_target_g, unit: "g", meta: { importance: 6, group: "nutrition", related: "carbs" } },
-          { label: "Fat", actual: hasTotals ? totals.fat / Math.max(1, currentRangeDays) : metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g", meta: { importance: 6, group: "nutrition", related: "fat" } },
+          { label: "Calories", actual: hasTotals ? totals.calories / avgDivisor : metrics?.calories_avg_day, target: targets.calories_target, unit: "kcal", meta: { importance: 8, group: "nutrition", related: "calories" } },
+          { label: "Protein", actual: hasTotals ? totals.protein / avgDivisor : metrics?.protein_avg_day, target: targets.protein_target_g, unit: "g", meta: { importance: 8, group: "nutrition", related: "protein" } },
+          { label: "Carbs", actual: hasTotals ? totals.carbs / avgDivisor : metrics?.carbs_avg_day, target: targets.carbs_target_g, unit: "g", meta: { importance: 6, group: "nutrition", related: "carbs" } },
+          { label: "Fat", actual: hasTotals ? totals.fat / avgDivisor : metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g", meta: { importance: 6, group: "nutrition", related: "fat" } },
         ];
 
         rows.forEach((row) => {
@@ -4113,7 +4485,7 @@
                 row.label,
                 `${formatNumber(actualVal, row.unit === "kcal" ? 0 : 1)} ${row.unit}`,
                 "warn",
-                "Target missing",
+                `Target missing · ${nutritionDaysCount}/7 days logged`,
                 row.meta,
               ),
             );
@@ -4125,6 +4497,7 @@
               actual: actualVal,
               target: targetVal,
               unit: row.unit,
+              coverage: `${nutritionDaysCount}/7 days logged`,
               meta: row.meta,
             }),
           );
