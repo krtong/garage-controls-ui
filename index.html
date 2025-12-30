@@ -243,6 +243,92 @@
       .legend-dot.good { background: var(--success); }
       .legend-dot.warn { background: #f59e0b; }
       .legend-dot.bad { background: var(--danger); }
+      .bullet {
+        position: relative;
+        height: 12px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(248,113,113,0.2) 0%, rgba(249,115,22,0.2) 60%, rgba(34,197,94,0.25) 90%, rgba(249,115,22,0.2) 110%);
+        overflow: hidden;
+      }
+      .bullet-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: rgba(56, 189, 248, 0.65);
+      }
+      .bullet-target {
+        position: absolute;
+        top: -4px;
+        width: 2px;
+        height: 20px;
+        background: #e2e8f0;
+      }
+      .bullet-scale {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .heatmap-day {
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+      .heatmap-meta {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .heatmap {
+        display: grid;
+        gap: 6px;
+      }
+      .heatmap-row {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .heatmap-cell {
+        border-radius: 10px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        padding: 8px 6px;
+        text-align: center;
+        background: rgba(9, 13, 26, 0.7);
+        font-size: 11px;
+        color: var(--muted);
+        display: grid;
+        gap: 6px;
+      }
+      .heatmap-cell.active-low { background: rgba(249,115,22,0.18); }
+      .heatmap-cell.active-high { background: rgba(34,197,94,0.2); }
+      .heatmap-cell.active-mid { background: rgba(56,189,248,0.2); }
+      .heatmap-dots {
+        display: inline-flex;
+        justify-content: center;
+        gap: 4px;
+      }
+      .heatmap-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+      }
+      .dot-sleep { background: #38bdf8; }
+      .dot-food { background: #f59e0b; }
+      .dot-train { background: #22c55e; }
+      .chart {
+        width: 100%;
+        overflow-x: auto;
+      }
+      .chart svg {
+        width: 100%;
+        height: 220px;
+      }
+      .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
       .trend-inline {
         display: flex;
         align-items: center;
@@ -465,91 +551,6 @@
         justify-content: space-between;
         font-size: 10px;
         color: var(--muted);
-      }
-      .gauge-grid {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      }
-      .gauge-card {
-        border-radius: 16px;
-        border: 1px solid rgba(42, 51, 82, 0.6);
-        background: rgba(9, 13, 26, 0.75);
-        padding: 12px;
-        display: grid;
-        gap: 8px;
-        align-items: center;
-        justify-items: center;
-        text-align: center;
-      }
-      .gauge-title {
-        font-size: 11px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-      .gauge-value {
-        font-size: 13px;
-        color: var(--muted);
-      }
-      .gauge-svg {
-        width: 110px;
-        height: 110px;
-      }
-      .donut-card {
-        border-radius: 16px;
-        border: 1px solid rgba(42, 51, 82, 0.6);
-        background: rgba(9, 13, 26, 0.75);
-        padding: 14px;
-        display: grid;
-        gap: 12px;
-      }
-      .donut-chart {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        margin: 0 auto;
-        display: grid;
-        place-items: center;
-        background: conic-gradient(#38bdf8 0% 33%, #22c55e 33% 66%, #f59e0b 66% 100%);
-      }
-      .donut-hole {
-        width: 90px;
-        height: 90px;
-        border-radius: 50%;
-        background: rgba(9, 13, 26, 0.9);
-        display: grid;
-        place-items: center;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .legend {
-        display: grid;
-        gap: 6px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .legend-swatch {
-        width: 10px;
-        height: 10px;
-        border-radius: 999px;
-      }
-      .swatch-protein { background: #38bdf8; }
-      .swatch-carbs { background: #22c55e; }
-      .swatch-fat { background: #f59e0b; }
-      .stars {
-        display: inline-flex;
-        gap: 4px;
-        font-size: 14px;
-        color: #facc15;
-      }
-      .star-off {
-        color: rgba(148, 163, 184, 0.5);
       }
       .threshold-bar {
         position: relative;
@@ -814,6 +815,10 @@
             <div class="meta" id="pos-summary-updated">—</div>
           </div>
           <div class="row-inline">
+            <div class="meta">Range</div>
+            <div id="pos-range" class="segmented"></div>
+          </div>
+          <div class="row-inline">
             <div id="pos-summary-freshness" class="pill unknown">Freshness</div>
             <div id="pos-run-status" class="pill unknown">Last run</div>
           </div>
@@ -833,6 +838,7 @@
             <div class="meta" id="pos-strava-note">—</div>
           </div>
           <div id="pos-strava-list" class="list"></div>
+          <div id="pos-strava-chart" class="chart"></div>
         </div>
         <div id="pos-plan" class="card grid hidden">
           <div class="row-inline">
@@ -844,10 +850,17 @@
         </div>
         <div id="pos-trends" class="card grid hidden">
           <div class="row-inline">
-            <div style="font-weight:600;">Trends (7d)</div>
+            <div style="font-weight:600;">Trends</div>
             <div class="meta" id="pos-trends-note">—</div>
           </div>
           <div id="pos-trends-list" class="list"></div>
+        </div>
+        <div id="pos-heatmap" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Week heatmap</div>
+            <div class="meta" id="pos-heatmap-note">—</div>
+          </div>
+          <div id="pos-heatmap-grid" class="heatmap"></div>
         </div>
         <div id="pos-stats" class="card grid hidden">
           <div class="row-inline">
@@ -892,6 +905,13 @@
           </div>
           <div id="pos-last-session-list" class="list"></div>
         </div>
+        <div id="pos-strength-scatter" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Strength scatter (quality vs asymmetry)</div>
+            <div class="meta" id="pos-strength-scatter-note">—</div>
+          </div>
+          <div id="pos-strength-scatter-chart" class="chart"></div>
+        </div>
         <div id="pos-quality-trends" class="card grid hidden">
           <div class="row-inline">
             <div style="font-weight:600;">Exercise trends</div>
@@ -905,6 +925,13 @@
             <div class="meta" id="pos-weakness-note">—</div>
           </div>
           <div id="pos-weakness-list" class="list"></div>
+        </div>
+        <div id="pos-sleep-plan" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Sleep plan</div>
+            <div class="meta" id="pos-sleep-plan-note">—</div>
+          </div>
+          <div id="pos-sleep-plan-list" class="list"></div>
         </div>
         <div class="actions">
           <button id="logout" class="secondary">Sign out</button>
@@ -943,12 +970,14 @@
       const posSummaryUpdatedEl = document.getElementById("pos-summary-updated");
       const posSummaryFreshnessEl = document.getElementById("pos-summary-freshness");
       const posSummaryNoteEl = document.getElementById("pos-summary-note");
+      const posRangeEl = document.getElementById("pos-range");
       const posRecoveryEl = document.getElementById("pos-recovery");
       const posRecoveryListEl = document.getElementById("pos-recovery-list");
       const posRecoveryNoteEl = document.getElementById("pos-recovery-note");
       const posStravaFitnessEl = document.getElementById("pos-strava-fitness");
       const posStravaListEl = document.getElementById("pos-strava-list");
       const posStravaNoteEl = document.getElementById("pos-strava-note");
+      const posStravaChartEl = document.getElementById("pos-strava-chart");
       const posPlanEl = document.getElementById("pos-plan");
       const posPlanBodyEl = document.getElementById("pos-plan-body");
       const posPlanDateEl = document.getElementById("pos-plan-date");
@@ -956,6 +985,9 @@
       const posTrendsEl = document.getElementById("pos-trends");
       const posTrendsListEl = document.getElementById("pos-trends-list");
       const posTrendsNoteEl = document.getElementById("pos-trends-note");
+      const posHeatmapEl = document.getElementById("pos-heatmap");
+      const posHeatmapGridEl = document.getElementById("pos-heatmap-grid");
+      const posHeatmapNoteEl = document.getElementById("pos-heatmap-note");
       const posStatsEl = document.getElementById("pos-stats");
       const posStatsListEl = document.getElementById("pos-stats-list");
       const posStatsRangeEl = document.getElementById("pos-stats-range");
@@ -975,12 +1007,18 @@
       const posLastSessionEl = document.getElementById("pos-last-session");
       const posLastSessionListEl = document.getElementById("pos-last-session-list");
       const posLastSessionNoteEl = document.getElementById("pos-last-session-note");
+      const posStrengthScatterEl = document.getElementById("pos-strength-scatter");
+      const posStrengthScatterChartEl = document.getElementById("pos-strength-scatter-chart");
+      const posStrengthScatterNoteEl = document.getElementById("pos-strength-scatter-note");
       const posQualityTrendsEl = document.getElementById("pos-quality-trends");
       const posQualityTrendsListEl = document.getElementById("pos-quality-trends-list");
       const posQualityTrendsNoteEl = document.getElementById("pos-quality-trends-note");
       const posWeaknessEl = document.getElementById("pos-weakness");
       const posWeaknessListEl = document.getElementById("pos-weakness-list");
       const posWeaknessNoteEl = document.getElementById("pos-weakness-note");
+      const posSleepPlanEl = document.getElementById("pos-sleep-plan");
+      const posSleepPlanListEl = document.getElementById("pos-sleep-plan-list");
+      const posSleepPlanNoteEl = document.getElementById("pos-sleep-plan-note");
       const posRunStatusEl = document.getElementById("pos-run-status");
       const garageSettingsEl = document.getElementById("garage-settings");
       const viewEventsEl = document.getElementById("view-events");
@@ -1005,14 +1043,17 @@
             "pos-strava-fitness",
             "pos-plan",
             "pos-trends",
+            "pos-heatmap",
             "pos-stats",
             "pos-apple-health",
             "pos-nutrition",
             "pos-baselines",
             "pos-quality",
             "pos-last-session",
+            "pos-strength-scatter",
             "pos-quality-trends",
             "pos-weakness",
+            "pos-sleep-plan",
           ],
         },
         pos: {
@@ -1023,14 +1064,17 @@
             "pos-strava-fitness",
             "pos-plan",
             "pos-trends",
+            "pos-heatmap",
             "pos-stats",
             "pos-apple-health",
             "pos-nutrition",
             "pos-baselines",
             "pos-quality",
             "pos-last-session",
+            "pos-strength-scatter",
             "pos-quality-trends",
             "pos-weakness",
+            "pos-sleep-plan",
           ],
           hiddenIds: [
             "garage-settings",
@@ -1045,6 +1089,13 @@
       let currentProcessId = "global";
       let currentDataView = "events";
       let currentView = "garage";
+      let currentRangeDays = 7;
+      const RANGE_OPTIONS = [
+        { label: "Today", days: 1 },
+        { label: "7d", days: 7 },
+        { label: "30d", days: 30 },
+        { label: "90d", days: 90 },
+      ];
       const DOORS = ["Left", "Middle", "Right"];
       const EVENTS_PAGE_SIZE = 200;
       let eventsLimit = EVENTS_PAGE_SIZE;
@@ -1520,9 +1571,9 @@
         if (!posStravaListEl || !posStravaFitnessEl) return;
         posStravaListEl.innerHTML = "";
         if (posStravaNoteEl) posStravaNoteEl.textContent = "";
+        if (posStravaChartEl) posStravaChartEl.innerHTML = "";
 
-        const since = new Date();
-        since.setDate(since.getDate() - 7);
+        const since = rangeStartDate(currentRangeDays);
         const sinceIso = since.toISOString().slice(0, 10);
 
         const { data, error } = await supabase
@@ -1552,11 +1603,22 @@
           const deltaForm = (last.form ?? 0) - (first.form ?? 0);
           const band = formBand(last.form);
           const label = sport === "all" ? "Overall" : sport.charAt(0).toUpperCase() + sport.slice(1);
-          const meta = `Fitness ${formatNumber(last.fitness, 1)} · Fatigue ${formatNumber(last.fatigue, 1)} · Form ${formatNumber(last.form, 1)} · Δ7d ${formatNumber(deltaForm, 1)}`;
+          const meta = `Fitness ${formatNumber(last.fitness, 1)} · Fatigue ${formatNumber(last.fatigue, 1)} · Form ${formatNumber(last.form, 1)} · Δ${currentRangeDays}d ${formatNumber(deltaForm, 1)}`;
           posStravaListEl.appendChild(renderStatusItem(label, band.label, band.tone, meta));
         });
 
-        if (posStravaNoteEl) posStravaNoteEl.textContent = `Showing last 7 days of Strava fitness.`;
+        const chartRows = bySport.all || bySport.running || bySport.cycling || bySport.swimming || [];
+        if (posStravaChartEl && chartRows.length) {
+          const labels = chartRows.map((row) => row.date);
+          const series = [
+            { label: "Fitness", color: "#38bdf8", values: chartRows.map((row) => row.fitness ?? 0) },
+            { label: "Fatigue", color: "#f59e0b", values: chartRows.map((row) => row.fatigue ?? 0) },
+            { label: "Form", color: "#22c55e", values: chartRows.map((row) => row.form ?? 0) },
+          ];
+          posStravaChartEl.innerHTML = renderLineChart({ labels, series, yLabel: "Score" });
+        }
+
+        if (posStravaNoteEl) posStravaNoteEl.textContent = `${rangeLabel(currentRangeDays)} of Strava fitness.`;
       }
 
       function trendBadge(values) {
@@ -1576,11 +1638,12 @@
         if (posTrendsNoteEl) posTrendsNoteEl.textContent = "";
 
         const now = new Date();
-        const start = new Date(now);
-        start.setDate(now.getDate() - 6);
+        const dayCount = Math.max(1, currentRangeDays);
+        const start = rangeStartDate(dayCount);
         const startIso = start.toISOString();
+        const startKey = startIso.slice(0, 10);
         const days = [];
-        for (let i = 0; i < 7; i += 1) {
+        for (let i = 0; i < dayCount; i += 1) {
           const d = new Date(start);
           d.setDate(start.getDate() + i);
           const key = dateKeyFromIso(d.toISOString());
@@ -1591,7 +1654,7 @@
           supabase
             .from("pos_day_metrics")
             .select("date,training_load_today")
-            .gte("date", startIso)
+            .gte("date", startKey)
             .order("date", { ascending: true }),
           supabase
             .from("pos_events")
@@ -1602,7 +1665,7 @@
           supabase
             .from("speediance_training_session_scores")
             .select("session_date")
-            .gte("session_date", start.toISOString().slice(0, 10)),
+            .gte("session_date", startKey),
         ]);
 
         const loadMap = new Map();
@@ -1652,7 +1715,7 @@
         loadSpark.innerHTML = renderSparkline(loadSeries, "rgba(56,189,248,0.9)");
         const loadMeta = document.createElement("div");
         loadMeta.className = "trend-meta";
-        loadMeta.textContent = `Last 7d: ${formatNumber(loadSeries[loadSeries.length - 1] ?? 0, 0)} load`;
+        loadMeta.textContent = `${rangeLabel(currentRangeDays)}: ${formatNumber(loadSeries[loadSeries.length - 1] ?? 0, 0)} load`;
         loadEntry.appendChild(loadSpark);
         loadEntry.appendChild(loadMeta);
         posTrendsListEl.appendChild(loadEntry);
@@ -1696,7 +1759,293 @@
         posTrendsListEl.appendChild(strengthEntry);
 
         if (posTrendsNoteEl) {
-          posTrendsNoteEl.textContent = "Momentum signals for the last 7 days.";
+          posTrendsNoteEl.textContent = `Momentum signals for ${rangeLabel(currentRangeDays).toLowerCase()}.`;
+        }
+      }
+
+      async function loadPosHeatmap() {
+        if (!posHeatmapGridEl || !posHeatmapEl) return;
+        posHeatmapGridEl.innerHTML = "";
+        if (posHeatmapNoteEl) posHeatmapNoteEl.textContent = "";
+
+        const daysCount = 7;
+        const start = rangeStartDate(daysCount);
+        const startIso = start.toISOString();
+        const startDateKey = startIso.slice(0, 10);
+        const days = [];
+        for (let i = 0; i < daysCount; i += 1) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          days.push(dateKeyFromIso(d.toISOString()));
+        }
+
+        const [metricsResp, nutritionResp, stravaResp, strengthResp] = await Promise.all([
+          supabase
+            .from("pos_day_metrics")
+            .select("date,training_load_today,sleep_seconds")
+            .gte("date", startDateKey)
+            .order("date", { ascending: true }),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp")
+            .eq("source", "nutrition")
+            .gte("event_timestamp", startIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "strava")
+            .eq("event_type", "activity")
+            .gte("event_timestamp", startIso),
+          supabase
+            .from("speediance_training_session_scores")
+            .select("session_date")
+            .gte("session_date", startDateKey),
+        ]);
+
+        const hasAny =
+          (metricsResp.data?.length ?? 0) +
+          (nutritionResp.data?.length ?? 0) +
+          (stravaResp.data?.length ?? 0) +
+          (strengthResp.data?.length ?? 0);
+        if (!hasAny) {
+          if (posHeatmapNoteEl) posHeatmapNoteEl.textContent = "No recent activity logged.";
+          return;
+        }
+
+        const loadByDay = new Map();
+        const sleepByDay = new Map();
+        (metricsResp.data || []).forEach((row) => {
+          if (!row.date) return;
+          loadByDay.set(row.date, Number(row.training_load_today ?? 0));
+          if (row.sleep_seconds != null) {
+            sleepByDay.set(row.date, row.sleep_seconds / 3600);
+          }
+        });
+
+        const nutritionByDay = new Map();
+        (nutritionResp.data || []).forEach((row) => {
+          const key = dateKeyFromIso(row.event_timestamp);
+          if (!key) return;
+          nutritionByDay.set(key, (nutritionByDay.get(key) || 0) + 1);
+        });
+
+        const stravaMinutesByDay = new Map();
+        (stravaResp.data || []).forEach((row) => {
+          const key = dateKeyFromIso(row.event_timestamp);
+          if (!key) return;
+          const payload = row.payload || {};
+          const duration = Number(payload.elapsed_s ?? payload.elapsed_time ?? payload.duration_s ?? 0);
+          if (!Number.isNaN(duration) && duration > 0) {
+            stravaMinutesByDay.set(key, (stravaMinutesByDay.get(key) || 0) + duration / 60);
+          }
+        });
+
+        const strengthByDay = new Map();
+        (strengthResp.data || []).forEach((row) => {
+          if (!row.session_date) return;
+          strengthByDay.set(row.session_date, (strengthByDay.get(row.session_date) || 0) + 1);
+        });
+
+        const loadValues = Array.from(loadByDay.values());
+        const maxLoad = loadValues.length ? Math.max(...loadValues) : 0;
+
+        const rowEl = document.createElement("div");
+        rowEl.className = "heatmap-row";
+
+        days.forEach((key) => {
+          const cell = document.createElement("div");
+          const load = loadByDay.get(key) || 0;
+          const sleep = sleepByDay.get(key);
+          const food = nutritionByDay.get(key) || 0;
+          const stravaMin = stravaMinutesByDay.get(key) || 0;
+          const strengthCount = strengthByDay.get(key) || 0;
+
+          let toneClass = "";
+          if (load > 0 && maxLoad > 0) {
+            const ratio = load / maxLoad;
+            toneClass = ratio > 0.66 ? "active-high" : ratio > 0.33 ? "active-mid" : "active-low";
+          }
+          cell.className = `heatmap-cell ${toneClass}`.trim();
+
+          const dateObj = key ? new Date(key) : new Date();
+          const dayLabel = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+          const loadLabel = load ? `Load ${formatNumber(load, 0)}` : "Load —";
+          const sleepLabel = sleep != null ? `${formatNumber(sleep, 1)}h sleep` : "Sleep —";
+          const trainLabel = stravaMin || strengthCount ? `${formatNumber(stravaMin, 0)} min · ${strengthCount} strength` : "Training —";
+          const foodLabel = food ? `${food} food logs` : "Food —";
+
+          cell.title = `${key}\n${loadLabel}\n${sleepLabel}\n${trainLabel}\n${foodLabel}`;
+
+          const dots = document.createElement("div");
+          dots.className = "heatmap-dots";
+          const sleepDot = document.createElement("span");
+          sleepDot.className = "heatmap-dot dot-sleep";
+          sleepDot.style.opacity = sleep != null ? "1" : "0.2";
+          const foodDot = document.createElement("span");
+          foodDot.className = "heatmap-dot dot-food";
+          foodDot.style.opacity = food ? "1" : "0.2";
+          const trainDot = document.createElement("span");
+          trainDot.className = "heatmap-dot dot-train";
+          trainDot.style.opacity = load > 0 || stravaMin > 0 || strengthCount > 0 ? "1" : "0.2";
+          dots.appendChild(sleepDot);
+          dots.appendChild(foodDot);
+          dots.appendChild(trainDot);
+
+          cell.innerHTML = `
+            <div class="heatmap-day">${dayLabel}</div>
+            <div class="heatmap-meta">${loadLabel}</div>
+            <div class="heatmap-meta">${sleepLabel}</div>
+            <div class="heatmap-meta">${trainLabel}</div>
+            <div class="heatmap-meta">${foodLabel}</div>
+          `;
+          cell.appendChild(dots);
+          rowEl.appendChild(cell);
+        });
+
+        posHeatmapGridEl.appendChild(rowEl);
+        if (posHeatmapNoteEl) {
+          posHeatmapNoteEl.textContent = "Last 7 days · dots show sleep, food, training coverage.";
+        }
+      }
+
+      async function loadPosStrengthScatter() {
+        if (!posStrengthScatterChartEl || !posStrengthScatterEl) return;
+        posStrengthScatterChartEl.innerHTML = "";
+        if (posStrengthScatterNoteEl) posStrengthScatterNoteEl.textContent = "";
+
+        const rangeDays = Math.min(currentRangeDays, 60);
+        const start = rangeStartDate(rangeDays);
+        const startKey = start.toISOString().slice(0, 10);
+        const { data, error } = await supabase
+          .from("speediance_exercise_session_metrics")
+          .select("action_library_group_id,action_library_name,quality_score,watt_asym_pct,speed_asym_pct,amplitude_asym_pct,session_date")
+          .gte("session_date", startKey)
+          .order("session_date", { ascending: false })
+          .limit(360);
+
+        if (error || !data || !data.length) {
+          if (posStrengthScatterNoteEl) posStrengthScatterNoteEl.textContent = "No strength quality data yet.";
+          return;
+        }
+
+        const byExercise = {};
+        data.forEach((row) => {
+          const key = row.action_library_group_id;
+          if (!byExercise[key]) {
+            byExercise[key] = {
+              name: row.action_library_name || `Exercise ${row.action_library_group_id}`,
+              quality: [],
+              asym: [],
+            };
+          }
+          if (row.quality_score != null) byExercise[key].quality.push(row.quality_score);
+          const asymVals = [row.watt_asym_pct, row.speed_asym_pct, row.amplitude_asym_pct].filter((v) => v != null);
+          if (asymVals.length) byExercise[key].asym.push(Math.max(...asymVals));
+        });
+
+        const points = Object.values(byExercise)
+          .map((item) => {
+            const qualityRaw = average(item.quality);
+            const asymRaw = item.asym.length ? Math.max(...item.asym) : null;
+            const quality = qualityRaw != null ? Math.min(100, Math.max(0, qualityRaw)) : null;
+            const asym = asymRaw != null ? Math.min(100, Math.max(0, asymRaw)) : null;
+            return { name: item.name, quality, asym };
+          })
+          .filter((item) => item.quality != null && item.asym != null)
+          .slice(0, 18);
+
+        if (!points.length) {
+          if (posStrengthScatterNoteEl) posStrengthScatterNoteEl.textContent = "No usable quality + asymmetry data.";
+          return;
+        }
+
+        const width = 560;
+        const height = 220;
+        const padding = { top: 18, right: 16, bottom: 32, left: 44 };
+        const plotWidth = width - padding.left - padding.right;
+        const plotHeight = height - padding.top - padding.bottom;
+
+        const svgPoints = points.map((point) => {
+          const x = padding.left + (point.quality / 100) * plotWidth;
+          const y = padding.top + (1 - point.asym / 100) * plotHeight;
+          const tone = point.quality >= 70 ? "#22c55e" : point.quality >= 45 ? "#f59e0b" : "#f87171";
+          return `
+            <circle cx="${x}" cy="${y}" r="4" fill="${tone}">
+              <title>${point.name} · Quality ${formatNumber(point.quality, 1)} · Asym ${formatNumber(point.asym, 1)}%</title>
+            </circle>
+          `;
+        }).join("");
+
+        const gridLines = [0, 50, 100].map((val) => {
+          const x = padding.left + (val / 100) * plotWidth;
+          const y = padding.top + (1 - val / 100) * plotHeight;
+          return `
+            <line x1="${x}" y1="${padding.top}" x2="${x}" y2="${height - padding.bottom}" stroke="rgba(148,163,184,0.15)" stroke-width="1" />
+            <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="rgba(148,163,184,0.15)" stroke-width="1" />
+            <text x="${x}" y="${height - 10}" text-anchor="middle" font-size="10" fill="#94a3b8">${val}</text>
+            <text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#94a3b8">${val}</text>
+          `;
+        }).join("");
+
+        posStrengthScatterChartEl.innerHTML = `
+          <div class="chart-legend">
+            <span><span class="legend-swatch" style="background:#22c55e"></span>Quality ≥70</span>
+            <span><span class="legend-swatch" style="background:#f59e0b"></span>Quality 45–69</span>
+            <span><span class="legend-swatch" style="background:#f87171"></span>Quality &lt;45</span>
+          </div>
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Quality vs asymmetry scatter">
+            ${gridLines}
+            ${svgPoints}
+            <text x="${padding.left + plotWidth / 2}" y="${height - 4}" text-anchor="middle" font-size="10" fill="#94a3b8">Quality score</text>
+            <text x="12" y="${padding.top + plotHeight / 2}" text-anchor="middle" font-size="10" fill="#94a3b8" writing-mode="tb">Asymmetry %</text>
+          </svg>
+        `;
+
+        if (posStrengthScatterNoteEl) {
+          posStrengthScatterNoteEl.textContent = `Avg quality vs max asymmetry · ${points.length} exercises · ${rangeLabel(rangeDays).toLowerCase()}.`;
+        }
+      }
+
+      async function loadPosSleepPlan() {
+        if (!posSleepPlanListEl || !posSleepPlanEl) return;
+        posSleepPlanListEl.innerHTML = "";
+        if (posSleepPlanNoteEl) posSleepPlanNoteEl.textContent = "";
+
+        const { data, error } = await supabase
+          .from("pos_day_metrics")
+          .select("date,sleep_seconds,sleep_baseline_7d")
+          .order("date", { ascending: false })
+          .limit(1);
+
+        if (error || !data || !data.length) {
+          if (posSleepPlanNoteEl) posSleepPlanNoteEl.textContent = "No sleep data yet.";
+          return;
+        }
+
+        const latest = data[0];
+        const sleepHours = latest.sleep_seconds ? latest.sleep_seconds / 3600 : null;
+        const baselineHours = latest.sleep_baseline_7d ? latest.sleep_baseline_7d / 3600 : null;
+        const target = baselineHours || 7;
+        const delta = sleepHours != null ? target - sleepHours : null;
+
+        posSleepPlanListEl.appendChild(renderPlanList("Last night", sleepHours != null ? `${formatNumber(sleepHours, 1)} h` : "No sleep logged"));
+        posSleepPlanListEl.appendChild(renderPlanList("Target tonight", `${formatNumber(target, 1)} h`));
+
+        if (delta != null && delta > 0.5) {
+          posSleepPlanListEl.appendChild(renderPlanList("Make up sleep", `Aim for +${formatNumber(delta, 1)} h`));
+          posSleepPlanListEl.appendChild(renderPlanList("Wind down", "No caffeine after 2pm · screens off 30 min before bed"));
+          posSleepPlanListEl.appendChild(renderPlanList("Environment", "Cool room, low light, same bedtime/wake time"));
+        } else if (sleepHours != null) {
+          posSleepPlanListEl.appendChild(renderPlanList("Consistency", "Keep bedtime steady and protect 30 min wind-down"));
+        } else {
+          posSleepPlanListEl.appendChild(renderPlanList("Next step", "Log sleep to unlock readiness guidance."));
+        }
+
+        if (posSleepPlanNoteEl) {
+          const noteParts = [];
+          if (sleepHours != null) noteParts.push(`${formatNumber(sleepHours, 1)} h last night`);
+          if (baselineHours != null) noteParts.push(`baseline ${formatNumber(baselineHours, 1)} h`);
+          posSleepPlanNoteEl.textContent = noteParts.length ? noteParts.join(" · ") : "Sleep plan ready";
         }
       }
 
@@ -1907,19 +2256,23 @@
 
       async function loadData() {
         if (currentView === "pos") {
+          renderRangeTabs();
           await loadPosSummary();
           await loadPosRecovery();
           await loadPosStravaFitness();
           await loadPosPlan();
           await loadPosTrends();
+          await loadPosHeatmap();
           await loadPosStats();
           await loadPosAppleHealth();
           await loadPosNutrition();
           await loadPosBaselines();
           await loadPosQuality();
           await loadPosLastSession();
+          await loadPosStrengthScatter();
           await loadPosQualityTrends();
           await loadPosWeakness();
+          await loadPosSleepPlan();
           return;
         }
         if (currentDataView === "state") {
@@ -1987,6 +2340,35 @@
           if (part.type !== "literal") lookup[part.type] = part.value;
         });
         return `${lookup.year}-${lookup.month}-${lookup.day}`;
+      }
+
+      function rangeStartDate(days) {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - Math.max(0, days - 1));
+        return start;
+      }
+
+      function rangeLabel(days) {
+        if (days === 1) return "Today";
+        return `Last ${days} days`;
+      }
+
+      function renderRangeTabs() {
+        if (!posRangeEl) return;
+        posRangeEl.innerHTML = "";
+        RANGE_OPTIONS.forEach((option) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = option.label;
+          if (currentRangeDays === option.days) btn.classList.add("active");
+          btn.addEventListener("click", async () => {
+            currentRangeDays = option.days;
+            renderRangeTabs();
+            await loadData();
+          });
+          posRangeEl.appendChild(btn);
+        });
       }
 
       function renderPlanList(title, value) {
@@ -2095,6 +2477,52 @@
         return item;
       }
 
+      function renderBullet({ label, actual, target, unit }) {
+        const safeTarget = Number(target ?? 0);
+        const safeActual = Number(actual ?? 0);
+        const ratio = safeTarget > 0 ? safeActual / safeTarget : 0;
+        const percent = Math.round(ratio * 100);
+        const status = ratio >= 1.1 ? "High" : ratio >= 0.9 ? "On target" : ratio >= 0.6 ? "Low" : "Very low";
+        const tone = ratio >= 0.9 && ratio <= 1.1 ? "good" : ratio >= 0.6 ? "warn" : "bad";
+        const decimals = unit === "kcal" ? 0 : 1;
+        const meta = `Avg ${formatNumber(safeActual, decimals)} ${unit} · Target ${formatNumber(safeTarget, 0)} ${unit} (${Number.isFinite(percent) ? percent : 0}%)`;
+
+        const item = document.createElement("div");
+        item.className = "list-item";
+        item.innerHTML = `<div class="list-title">${label}</div><div class="list-meta">${meta}</div>`;
+        const chip = document.createElement("div");
+        chip.className = `status-chip ${tone}`;
+        chip.textContent = status;
+        item.appendChild(chip);
+
+        const scaleMax = safeTarget > 0 ? safeTarget * 1.2 : safeActual || 1;
+        const fillPct = scaleMax > 0 ? Math.min(100, (safeActual / scaleMax) * 100) : 0;
+        const targetPct = scaleMax > 0 ? Math.min(100, (safeTarget / scaleMax) * 100) : 0;
+
+        const bullet = document.createElement("div");
+        bullet.className = "bullet";
+        bullet.title = `${formatNumber(safeActual, decimals)} ${unit} of ${formatNumber(safeTarget, 0)} ${unit} (${percent}%)`;
+        const fill = document.createElement("div");
+        fill.className = "bullet-fill";
+        fill.style.width = `${Math.max(2, fillPct)}%`;
+        const targetLine = document.createElement("div");
+        targetLine.className = "bullet-target";
+        targetLine.style.left = `${targetPct}%`;
+        bullet.appendChild(fill);
+        bullet.appendChild(targetLine);
+        item.appendChild(bullet);
+
+        const scale = document.createElement("div");
+        scale.className = "bullet-scale";
+        scale.innerHTML = `
+          <span>0</span>
+          <span>${formatNumber(safeTarget, 0)} ${unit}</span>
+          <span>${formatNumber(scaleMax, 0)} ${unit}</span>
+        `;
+        item.appendChild(scale);
+        return item;
+      }
+
       function renderGauge({ label, value, percent, icon }) {
         const safePercent = Math.max(0, Math.min(100, percent ?? 0));
         const radius = 42;
@@ -2184,6 +2612,55 @@
           </div>
         `;
         return donut;
+      }
+
+      function renderLineChart({ labels, series, yLabel }) {
+        if (!series || !series.length || !labels || !labels.length) return "";
+        const width = 560;
+        const height = 220;
+        const padding = { top: 16, right: 16, bottom: 32, left: 44 };
+        const plotWidth = width - padding.left - padding.right;
+        const plotHeight = height - padding.top - padding.bottom;
+        const values = series.flatMap((s) => s.values.filter((v) => v != null));
+        const minVal = Math.min(...values);
+        const maxVal = Math.max(...values);
+        const span = maxVal - minVal || 1;
+        const xStep = labels.length > 1 ? plotWidth / (labels.length - 1) : plotWidth;
+
+        const yAt = (val) => padding.top + (1 - (val - minVal) / span) * plotHeight;
+        const xAt = (idx) => padding.left + idx * xStep;
+
+        const gridLines = [0, 0.5, 1].map((p) => {
+          const y = padding.top + (1 - p) * plotHeight;
+          const val = minVal + p * span;
+          return `
+            <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="rgba(148,163,184,0.2)" stroke-width="1" />
+            <text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#94a3b8">${formatNumber(val, 1)}</text>
+          `;
+        }).join("");
+
+        const paths = series.map((s) => {
+          const points = s.values.map((val, idx) => `${xAt(idx)},${yAt(val ?? minVal)}`).join(" ");
+          return `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${points}" />`;
+        }).join("");
+
+        const startLabel = labels[0] ?? "";
+        const endLabel = labels[labels.length - 1] ?? "";
+        const legend = series.map((s) => {
+          const last = s.values[s.values.length - 1];
+          return `<span><span class="legend-swatch" style="background:${s.color}"></span>${s.label} ${formatNumber(last, 1)}</span>`;
+        }).join("");
+
+        return `
+          <div class="chart-legend">${legend}</div>
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Trend chart">
+            ${gridLines}
+            ${paths}
+            <text x="${padding.left}" y="${height - 10}" font-size="10" fill="#94a3b8">${startLabel}</text>
+            <text x="${width - padding.right}" y="${height - 10}" text-anchor="end" font-size="10" fill="#94a3b8">${endLabel}</text>
+            ${yLabel ? `<text x="12" y="${padding.top}" font-size="10" fill="#94a3b8" writing-mode="tb">${yLabel}</text>` : ""}
+          </svg>
+        `;
       }
 
       function bandFromScore(score) {
@@ -2297,12 +2774,12 @@
       }
 
       function formatMiles(meters) {
-        if (!meters || Number.isNaN(meters)) return null;
+        if (meters === null || meters === undefined || Number.isNaN(meters)) return null;
         return meters / 1609.34;
       }
 
       function formatYards(meters) {
-        if (!meters || Number.isNaN(meters)) return null;
+        if (meters === null || meters === undefined || Number.isNaN(meters)) return null;
         return meters * 1.09361;
       }
 
@@ -2312,11 +2789,11 @@
         if (posStatsNoteEl) posStatsNoteEl.textContent = "";
 
         const now = new Date();
-        const weekStart = startOfWeekSunday(now);
-        const daysElapsed = daysSinceSunday(now);
-        const weekStartIso = weekStart.toISOString();
+        const rangeStart = rangeStartDate(currentRangeDays);
+        const daysElapsed = Math.max(1, currentRangeDays);
+        const weekStartIso = rangeStart.toISOString();
         if (posStatsRangeEl) {
-          posStatsRangeEl.textContent = `Since ${weekStart.toLocaleDateString()} (${daysElapsed} day${daysElapsed === 1 ? "" : "s"})`;
+          posStatsRangeEl.textContent = `${rangeLabel(currentRangeDays)} (${daysElapsed} day${daysElapsed === 1 ? "" : "s"})`;
         }
 
         const [stravaResp, healthResp, nutritionResp] = await Promise.all([
@@ -2486,9 +2963,9 @@
         if (posAppleHealthNoteEl) posAppleHealthNoteEl.textContent = "";
 
         const now = new Date();
-        const weekStart = startOfWeekSunday(now);
-        const daysElapsed = daysSinceSunday(now);
-        const weekStartIso = weekStart.toISOString();
+        const rangeStart = rangeStartDate(currentRangeDays);
+        const daysElapsed = Math.max(1, currentRangeDays);
+        const weekStartIso = rangeStart.toISOString();
 
         const { data, error } = await supabase
           .from("pos_events")
@@ -2547,7 +3024,8 @@
         });
 
         if (posAppleHealthNoteEl) {
-          posAppleHealthNoteEl.textContent = latestTimestamp ? `Updated ${formatTimestamp(latestTimestamp)}` : "Updated this week";
+          const updateLabel = latestTimestamp ? `Updated ${formatTimestamp(latestTimestamp)}` : "Updated this week";
+          posAppleHealthNoteEl.textContent = `${updateLabel} · ${rangeLabel(currentRangeDays).toLowerCase()}`;
         }
       }
 
@@ -2557,7 +3035,9 @@
         if (posNutritionNoteEl) posNutritionNoteEl.textContent = "";
 
         const dateKey = localDateKey();
-        const [metricsResp, planResp] = await Promise.all([
+        const rangeStart = rangeStartDate(currentRangeDays);
+        const rangeIso = rangeStart.toISOString();
+        const [metricsResp, planResp, nutritionResp] = await Promise.all([
           supabase
             .from("pos_day_metrics")
             .select("date,nutrition_entries_7d,calories_avg_day,protein_avg_day,carbs_avg_day,fat_avg_day")
@@ -2569,11 +3049,32 @@
             .lte("date", dateKey)
             .order("date", { ascending: false })
             .limit(1),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "nutrition")
+            .gte("event_timestamp", rangeIso),
         ]);
 
         const metrics = metricsResp.data?.[0] ?? null;
         const plan = planResp.data?.[0] ?? null;
         const targets = plan?.plan_json?.nutrition_targets ?? {};
+        let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        let hasTotals = false;
+        if (nutritionResp.data?.length) {
+          nutritionResp.data.forEach((row) => {
+            const payload = row.payload || {};
+            const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? payload.value1 ?? 0);
+            const protein = Number(payload.protein_g ?? payload.protein ?? 0);
+            const carbs = Number(payload.carbs_g ?? payload.carbs ?? 0);
+            const fat = Number(payload.fat_g ?? payload.fat ?? 0);
+            if (!Number.isNaN(calories) && calories > 0) totals.calories += calories;
+            if (!Number.isNaN(protein) && protein > 0) totals.protein += protein;
+            if (!Number.isNaN(carbs) && carbs > 0) totals.carbs += carbs;
+            if (!Number.isNaN(fat) && fat > 0) totals.fat += fat;
+          });
+          hasTotals = totals.calories + totals.protein + totals.carbs + totals.fat > 0;
+        }
 
         if (!metrics && !targets) {
           if (posNutritionNoteEl) posNutritionNoteEl.textContent = "No nutrition data yet.";
@@ -2581,19 +3082,16 @@
         }
 
         if (posNutritionNoteEl) {
-          const entries = metrics?.nutrition_entries_7d ?? 0;
-          posNutritionNoteEl.textContent = entries ? `${entries} logs in last 7d` : "No logs yet.";
+          const entries = nutritionResp.data?.length ?? 0;
+          posNutritionNoteEl.textContent = entries ? `${entries} logs in ${rangeLabel(currentRangeDays).toLowerCase()}` : "No logs yet.";
         }
 
         const rows = [
-          { label: "Calories", actual: metrics?.calories_avg_day, target: targets.calories_target, unit: "kcal" },
-          { label: "Protein", actual: metrics?.protein_avg_day, target: targets.protein_target_g, unit: "g" },
-          { label: "Carbs", actual: metrics?.carbs_avg_day, target: targets.carbs_target_g, unit: "g" },
-          { label: "Fat", actual: metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g" },
+          { label: "Calories", actual: hasTotals ? totals.calories / Math.max(1, currentRangeDays) : metrics?.calories_avg_day, target: targets.calories_target, unit: "kcal" },
+          { label: "Protein", actual: hasTotals ? totals.protein / Math.max(1, currentRangeDays) : metrics?.protein_avg_day, target: targets.protein_target_g, unit: "g" },
+          { label: "Carbs", actual: hasTotals ? totals.carbs / Math.max(1, currentRangeDays) : metrics?.carbs_avg_day, target: targets.carbs_target_g, unit: "g" },
+          { label: "Fat", actual: hasTotals ? totals.fat / Math.max(1, currentRangeDays) : metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g" },
         ];
-
-        const gaugesWrap = document.createElement("div");
-        gaugesWrap.className = "gauge-grid";
 
         rows.forEach((row) => {
           const actualVal = row.actual;
@@ -2602,21 +3100,15 @@
             posNutritionListEl.appendChild(renderStatusItem(row.label, "No data", "warn", "Needs logging"));
             return;
           }
-          const percent = (actualVal / targetVal) * 100;
-          const icon = row.label === "Calories" ? "🍽️" : row.label === "Protein" ? "🥩" : row.label === "Carbs" ? "🍞" : "🥑";
-          gaugesWrap.appendChild(
-            renderGauge({
+          posNutritionListEl.appendChild(
+            renderBullet({
               label: row.label,
-              value: `${formatNumber(actualVal, 1)} ${row.unit} / ${formatNumber(targetVal, 0)} ${row.unit}`,
-              percent,
-              icon,
+              actual: actualVal,
+              target: targetVal,
+              unit: row.unit,
             }),
           );
         });
-
-        if (gaugesWrap.children.length) {
-          posNutritionListEl.appendChild(gaugesWrap);
-        }
 
         const protein = rows.find((row) => row.label === "Protein");
         const carbs = rows.find((row) => row.label === "Carbs");
