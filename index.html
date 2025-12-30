@@ -512,6 +512,13 @@
           </div>
           <div id="pos-quality-list" class="list"></div>
         </div>
+        <div id="pos-last-session" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Last session breakdown</div>
+            <div class="meta" id="pos-last-session-note">—</div>
+          </div>
+          <div id="pos-last-session-list" class="list"></div>
+        </div>
         <div id="pos-quality-trends" class="card grid hidden">
           <div class="row-inline">
             <div style="font-weight:600;">Exercise trends</div>
@@ -577,6 +584,9 @@
       const posQualityEl = document.getElementById("pos-quality");
       const posQualityListEl = document.getElementById("pos-quality-list");
       const posQualityNoteEl = document.getElementById("pos-quality-note");
+      const posLastSessionEl = document.getElementById("pos-last-session");
+      const posLastSessionListEl = document.getElementById("pos-last-session-list");
+      const posLastSessionNoteEl = document.getElementById("pos-last-session-note");
       const posQualityTrendsEl = document.getElementById("pos-quality-trends");
       const posQualityTrendsListEl = document.getElementById("pos-quality-trends-list");
       const posQualityTrendsNoteEl = document.getElementById("pos-quality-trends-note");
@@ -601,11 +611,29 @@
             "data-status",
             "load-more-events",
           ],
-          hiddenIds: ["pos-summary", "pos-plan", "pos-stats", "pos-baselines", "pos-quality", "pos-quality-trends", "pos-weakness"],
+          hiddenIds: [
+            "pos-summary",
+            "pos-plan",
+            "pos-stats",
+            "pos-baselines",
+            "pos-quality",
+            "pos-last-session",
+            "pos-quality-trends",
+            "pos-weakness",
+          ],
         },
         pos: {
           label: "Personal Ops",
-          visibleIds: ["pos-summary", "pos-plan", "pos-stats", "pos-baselines", "pos-quality", "pos-quality-trends", "pos-weakness"],
+          visibleIds: [
+            "pos-summary",
+            "pos-plan",
+            "pos-stats",
+            "pos-baselines",
+            "pos-quality",
+            "pos-last-session",
+            "pos-quality-trends",
+            "pos-weakness",
+          ],
           hiddenIds: [
             "garage-settings",
             "garage-data-card",
@@ -1192,6 +1220,7 @@
           await loadPosStats();
           await loadPosBaselines();
           await loadPosQuality();
+          await loadPosLastSession();
           await loadPosQualityTrends();
           await loadPosWeakness();
           return;
@@ -1559,16 +1588,73 @@
         });
       }
 
+      async function loadPosLastSession() {
+        if (!posLastSessionListEl) return;
+        posLastSessionListEl.innerHTML = "";
+        if (posLastSessionNoteEl) posLastSessionNoteEl.textContent = "";
+
+        const { data: sessionData, error: sessionError } = await supabase
+          .from("speediance_training_session_scores")
+          .select("training_id,session_date,quality_score")
+          .order("session_date", { ascending: false })
+          .limit(1);
+
+        if (sessionError || !sessionData || !sessionData.length) {
+          if (posLastSessionNoteEl) posLastSessionNoteEl.textContent = "No session data yet.";
+          return;
+        }
+
+        const session = sessionData[0];
+        const sessionLabel = session.session_date
+          ? new Date(session.session_date).toLocaleDateString()
+          : session.training_id;
+        if (posLastSessionNoteEl) {
+          const score = session.quality_score != null ? `${formatNumber(session.quality_score, 1)}` : "—";
+          posLastSessionNoteEl.textContent = `Latest: ${sessionLabel} · Score ${score}`;
+        }
+
+        const { data: metricsData, error: metricsError } = await supabase
+          .from("speediance_exercise_session_metrics")
+          .select("action_library_name,quality_score,rep_time_cv,completion_ratio,avg_watts,max_watts,total_reps")
+          .eq("training_id", session.training_id)
+          .order("quality_score", { ascending: false })
+          .limit(8);
+
+        if (metricsError || !metricsData || !metricsData.length) {
+          if (posLastSessionNoteEl) posLastSessionNoteEl.textContent = "No exercise details yet.";
+          return;
+        }
+
+        metricsData.forEach((row) => {
+          const title = row.action_library_name || "Exercise";
+          const score = row.quality_score != null ? `${formatNumber(row.quality_score, 1)}` : "—";
+          const metaParts = [];
+          if (row.completion_ratio != null) metaParts.push(`Comp ${formatNumber(row.completion_ratio * 100, 0)}%`);
+          if (row.rep_time_cv != null) metaParts.push(`Rep CV ${formatNumber(row.rep_time_cv, 2)}`);
+          if (row.avg_watts != null) metaParts.push(`Avg ${formatNumber(row.avg_watts, 0)} W`);
+          if (row.max_watts != null) metaParts.push(`Peak ${formatNumber(row.max_watts, 0)} W`);
+          if (row.total_reps != null) metaParts.push(`${formatNumber(row.total_reps, 0)} reps`);
+          posLastSessionListEl.appendChild(renderStatList(title, score, metaParts.join(" · ")));
+        });
+      }
+
       async function loadPosQualityTrends() {
         if (!posQualityTrendsListEl) return;
         posQualityTrendsListEl.innerHTML = "";
         if (posQualityTrendsNoteEl) posQualityTrendsNoteEl.textContent = "";
 
-        const { data, error } = await supabase
-          .from("speediance_exercise_session_metrics")
-          .select("action_library_group_id,action_library_name,session_date,quality_score,avg_watts,avg_speed,avg_amplitude,completion_ratio,watt_asym_pct,speed_asym_pct,amplitude_asym_pct")
-          .order("session_date", { ascending: false })
-          .limit(240);
+        const [metricsResp, baselineResp] = await Promise.all([
+          supabase
+            .from("speediance_exercise_session_metrics")
+            .select("action_library_group_id,action_library_name,session_date,quality_score,avg_watts,max_watts,avg_speed,avg_amplitude,completion_ratio,max_weight,watt_asym_pct,speed_asym_pct,amplitude_asym_pct")
+            .order("session_date", { ascending: false })
+            .limit(240),
+          supabase
+            .from("speediance_exercise_baselines")
+            .select("action_library_group_id,max_watts,max_weight,one_rm"),
+        ]);
+        const { data, error } = metricsResp;
+        const baselineData = baselineResp.data ?? [];
 
         if (error || !data || !data.length) {
           if (posQualityTrendsNoteEl) posQualityTrendsNoteEl.textContent = "No quality trends yet.";
@@ -1576,25 +1662,37 @@
         }
         if (posQualityTrendsNoteEl) posQualityTrendsNoteEl.textContent = "Last 6 sessions per exercise";
 
+        const baselineMap = new Map();
+        baselineData.forEach((row) => {
+          if (!row?.action_library_group_id) return;
+          baselineMap.set(row.action_library_group_id, row);
+        });
+
         const grouped = {};
         data.forEach((row) => {
           if (!row.action_library_group_id) return;
           const key = row.action_library_group_id;
           if (!grouped[key]) {
             grouped[key] = {
+              id: key,
               name: row.action_library_name || `Exercise ${row.action_library_group_id}`,
               lastDate: row.session_date,
               latest: {
                 quality: row.quality_score ?? null,
                 avgWatts: row.avg_watts ?? null,
+                maxWatts: row.max_watts ?? null,
                 avgSpeed: row.avg_speed ?? null,
                 avgAmplitude: row.avg_amplitude ?? null,
                 completion: row.completion_ratio ?? null,
+                maxWeight: row.max_weight ?? null,
                 asym: null,
               },
               series: {
                 quality: [],
                 asym: [],
+                watts: [],
+                speed: [],
+                amplitude: [],
               },
             };
           }
@@ -1611,18 +1709,30 @@
           if (asym !== null) {
             grouped[key].series.asym.push(asym);
           }
+          if (row.avg_watts != null) grouped[key].series.watts.push(row.avg_watts);
+          if (row.avg_speed != null) grouped[key].series.speed.push(row.avg_speed);
+          if (row.avg_amplitude != null) grouped[key].series.amplitude.push(row.avg_amplitude);
         });
 
         Object.values(grouped)
           .map((item) => {
             const qualitySeries = item.series.quality.slice(0, 6).reverse();
             const asymSeries = item.series.asym.slice(0, 6).reverse();
+            const wattsSeries = item.series.watts.slice(0, 6).reverse();
+            const speedSeries = item.series.speed.slice(0, 6).reverse();
+            const ampSeries = item.series.amplitude.slice(0, 6).reverse();
+            const baseline = baselineMap.get(item.id);
             return {
+              id: item.id,
               name: item.name,
               lastDate: item.lastDate,
               latest: item.latest,
               qualitySeries,
               asymSeries,
+              wattsSeries,
+              speedSeries,
+              ampSeries,
+              baseline,
             };
           })
           .sort((a, b) => new Date(b.lastDate ?? 0) - new Date(a.lastDate ?? 0))
@@ -1632,6 +1742,9 @@
               item.latest.quality != null ? `${formatNumber(item.latest.quality, 1)}` : "—";
             const qualitySpark = renderSparkline(item.qualitySeries, "rgba(56,189,248,0.9)");
             const asymSpark = renderSparkline(item.asymSeries, "rgba(248,113,113,0.9)");
+            const wattsSpark = renderSparkline(item.wattsSeries, "rgba(14,165,233,0.85)");
+            const speedSpark = renderSparkline(item.speedSeries, "rgba(129,140,248,0.9)");
+            const ampSpark = renderSparkline(item.ampSeries, "rgba(16,185,129,0.9)");
             const statParts = [];
             if (item.latest.avgWatts != null) statParts.push(`Avg ${formatNumber(item.latest.avgWatts, 0)} W`);
             if (item.latest.avgSpeed != null) statParts.push(`Speed ${formatNumber(item.latest.avgSpeed, 2)}`);
@@ -1640,6 +1753,25 @@
               statParts.push(`Comp ${formatNumber(item.latest.completion * 100, 0)}%`);
             }
             if (item.latest.asym != null) statParts.push(`Asym ${formatNumber(item.latest.asym, 1)}%`);
+            if (item.baseline) {
+              const baseline = item.baseline;
+              const ratioParts = [];
+              if (baseline.max_watts && item.latest.maxWatts) {
+                const ratio = (item.latest.maxWatts / baseline.max_watts) * 100;
+                ratioParts.push(`Peak W ${formatNumber(ratio, 0)}%`);
+              }
+              if (baseline.max_weight && item.latest.maxWeight) {
+                const ratio = (item.latest.maxWeight / baseline.max_weight) * 100;
+                ratioParts.push(`Peak wt ${formatNumber(ratio, 0)}%`);
+              }
+              if (baseline.one_rm && item.latest.maxWeight) {
+                const ratio = (item.latest.maxWeight / baseline.one_rm) * 100;
+                ratioParts.push(`1RM ${formatNumber(ratio, 0)}%`);
+              }
+              if (ratioParts.length) {
+                statParts.push(`Vs baseline: ${ratioParts.join(" · ")}`);
+              }
+            }
             const statsLine = statParts.join(" · ");
             const trendBlocks = [];
             if (qualitySpark) {
@@ -1655,6 +1787,30 @@
                 <div class="trend-item">
                   <div class="trend-label">Asymmetry</div>
                   ${asymSpark}
+                </div>
+              `);
+            }
+            if (wattsSpark) {
+              trendBlocks.push(`
+                <div class="trend-item">
+                  <div class="trend-label">Watts</div>
+                  ${wattsSpark}
+                </div>
+              `);
+            }
+            if (speedSpark) {
+              trendBlocks.push(`
+                <div class="trend-item">
+                  <div class="trend-label">Speed</div>
+                  ${speedSpark}
+                </div>
+              `);
+            }
+            if (ampSpark) {
+              trendBlocks.push(`
+                <div class="trend-item">
+                  <div class="trend-label">ROM</div>
+                  ${ampSpark}
                 </div>
               `);
             }
@@ -1714,7 +1870,7 @@
             const asymNorm = maxAsym != null ? clamp01(maxAsym / 100) : 0;
             const repCvNorm = avgRepCv != null ? clamp01(avgRepCv / 0.35) : 0;
             const completionNorm = avgCompletion != null ? clamp01(1 - avgCompletion) : 0;
-            const weakness = (1 - scoreNorm) * 0.5 + asymNorm * 0.25 + repCvNorm * 0.15 + completionNorm * 0.1;
+            const weakness = (1 - scoreNorm) * 0.45 + asymNorm * 0.3 + repCvNorm * 0.15 + completionNorm * 0.1;
             return { name: item.name, avgScore, maxAsym, avgRepCv, avgCompletion, weakness, scoreNorm, asymNorm, repCvNorm, completionNorm };
           })
           .sort((a, b) => b.weakness - a.weakness)
