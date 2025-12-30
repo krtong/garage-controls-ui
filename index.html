@@ -260,6 +260,32 @@
         display: grid;
         gap: 10px;
       }
+      .pillar-grid {
+        display: grid;
+        gap: 10px;
+      }
+      .pillar-item {
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(10, 15, 31, 0.6);
+        display: grid;
+        gap: 8px;
+      }
+      .pillar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .pillar-title {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .pillar-meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
       .pos-day-drawer {
         border-radius: 18px;
         border: 1px solid rgba(59, 130, 246, 0.3);
@@ -1194,6 +1220,37 @@
             </div>
           </div>
 
+          <div class="pos-body" data-pos-view="race">
+            <div class="pos-left">
+              <div id="pos-race-summary" class="pos-section hidden" data-pos-view="race" data-importance="10" data-group="race_readiness" data-related="readiness,swim,bike,run,confidence">
+                <div class="row-inline">
+                  <div style="font-weight:600;">Escape from Alcatraz 2026</div>
+                  <div class="meta" id="pos-race-countdown">—</div>
+                </div>
+                <div class="meta" id="pos-race-note">Race window: June 6–7, 2026.</div>
+                <div id="pos-race-pillars" class="pillar-grid"></div>
+              </div>
+            </div>
+            <div class="pos-right">
+              <div class="pos-right-stack">
+                <div id="pos-race-limiters" class="pos-panel hidden" data-pos-view="race" data-importance="9" data-group="race_limiters" data-related="limiters,risks">
+                  <div class="row-inline">
+                    <div style="font-weight:600;">Top limiters</div>
+                    <div class="meta" id="pos-race-limiters-note">—</div>
+                  </div>
+                  <div id="pos-race-limiters-list" class="list"></div>
+                </div>
+                <div id="pos-race-phase" class="pos-panel hidden" data-pos-view="race" data-importance="8" data-group="race_phase" data-related="phase,countdown">
+                  <div class="row-inline">
+                    <div style="font-weight:600;">Phase & focus</div>
+                    <div class="meta" id="pos-race-phase-note">—</div>
+                  </div>
+                  <div id="pos-race-phase-list" class="list"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="pos-lab" data-pos-view="strength" data-importance="8" data-group="strength_lab">
             <div class="pos-lab-header">
               <div style="font-weight:600;">Strength Lab</div>
@@ -1346,6 +1403,16 @@
       const posDataHealthEl = document.getElementById("pos-data-health");
       const posDataHealthListEl = document.getElementById("pos-data-health-list");
       const posDataHealthNoteEl = document.getElementById("pos-data-health-note");
+      const posRaceSummaryEl = document.getElementById("pos-race-summary");
+      const posRaceCountdownEl = document.getElementById("pos-race-countdown");
+      const posRaceNoteEl = document.getElementById("pos-race-note");
+      const posRacePillarsEl = document.getElementById("pos-race-pillars");
+      const posRaceLimitersEl = document.getElementById("pos-race-limiters");
+      const posRaceLimitersListEl = document.getElementById("pos-race-limiters-list");
+      const posRaceLimitersNoteEl = document.getElementById("pos-race-limiters-note");
+      const posRacePhaseEl = document.getElementById("pos-race-phase");
+      const posRacePhaseListEl = document.getElementById("pos-race-phase-list");
+      const posRacePhaseNoteEl = document.getElementById("pos-race-phase-note");
       const posBaselinesEl = document.getElementById("pos-baselines");
       const posBaselinesListEl = document.getElementById("pos-baselines-list");
       const posBaselinesNoteEl = document.getElementById("pos-baselines-note");
@@ -1452,6 +1519,7 @@
       ];
       const POS_VIEW_OPTIONS = [
         { id: "overview", label: "Overview" },
+        { id: "race", label: "Race" },
         { id: "training", label: "Training" },
         { id: "strength", label: "Strength" },
         { id: "nutrition", label: "Nutrition" },
@@ -2190,6 +2258,155 @@
         if (posDataHealthNoteEl) {
           const updatedAt = training.updated_at ? `Training updated ${formatTimestamp(training.updated_at)}` : "Training update unknown";
           posDataHealthNoteEl.textContent = `${updatedAt} · Coverage last 7 days.`;
+        }
+      }
+
+      function renderPillar({ label, score, tone, detail, meta }) {
+        const item = document.createElement("div");
+        item.className = "pillar-item";
+        const scoreLabel = score != null ? `${formatNumber(score, 0)}/100` : "—";
+        item.innerHTML = `
+          <div class="pillar-header">
+            <div class="pillar-title">${label}</div>
+            <span class="status-chip ${tone}">${scoreLabel}</span>
+          </div>
+          <div class="pillar-meta">${detail || ""}</div>
+        `;
+        attachMeta(item, meta);
+        return item;
+      }
+
+      async function loadPosRaceReadiness() {
+        if (!posRaceSummaryEl || !posRacePillarsEl) return;
+        posRacePillarsEl.innerHTML = "";
+        if (posRaceLimitersListEl) posRaceLimitersListEl.innerHTML = "";
+
+        const raceStart = new Date("2026-06-06T00:00:00");
+        const today = new Date();
+        const daysToRace = Math.max(0, Math.ceil((raceStart - today) / (1000 * 60 * 60 * 24)));
+        if (posRaceCountdownEl) {
+          posRaceCountdownEl.textContent = `${daysToRace} days to race`;
+        }
+        if (posRaceNoteEl) {
+          posRaceNoteEl.textContent = "Cold swim + hilly bike + sand ladder run.";
+        }
+
+        const [readinessResp, trainingResp, metricsResp] = await Promise.all([
+          supabase
+            .from("readiness_state")
+            .select("readiness_score,sleep_updated_at,weight_updated_at")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("training_state")
+            .select("endurance_sessions_7d,strength_sessions_7d,total_distance_m_7d,total_time_s_7d")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("pos_day_metrics")
+            .select("adherence_7d,training_load_7d")
+            .order("date", { ascending: false })
+            .limit(1),
+        ]);
+
+        const readiness = readinessResp.data ?? {};
+        const training = trainingResp.data ?? {};
+        const metrics = metricsResp.data?.[0] ?? {};
+
+        const readinessScore = readiness.readiness_score ?? null;
+        const enduranceCount = training.endurance_sessions_7d ?? 0;
+        const strengthCount = training.strength_sessions_7d ?? 0;
+        const distanceMiles = formatMiles(training.total_distance_m_7d ?? 0) ?? 0;
+        const adherencePct = metrics.adherence_7d != null ? metrics.adherence_7d * 100 : null;
+
+        const sleepAge = formatAgeDays(readiness.sleep_updated_at);
+        const weightAge = formatAgeDays(readiness.weight_updated_at);
+
+        const pillarDefs = [
+          {
+            label: "Cold swim",
+            score: enduranceCount ? Math.min(100, enduranceCount * 12 + distanceMiles * 2) : 0,
+            tone: enduranceCount >= 2 ? "good" : enduranceCount >= 1 ? "warn" : "bad",
+            detail: enduranceCount ? `${enduranceCount} endurance sessions` : "Needs open water exposure",
+            meta: { importance: 9, group: "race_pillar", related: "swim,open_water" },
+          },
+          {
+            label: "Bike readiness",
+            score: distanceMiles ? Math.min(100, distanceMiles * 4) : 0,
+            tone: distanceMiles >= 40 ? "good" : distanceMiles >= 20 ? "warn" : "bad",
+            detail: `${formatNumber(distanceMiles, 1)} mi this week`,
+            meta: { importance: 8, group: "race_pillar", related: "bike" },
+          },
+          {
+            label: "Run durability",
+            score: enduranceCount ? Math.min(100, enduranceCount * 10) : 0,
+            tone: enduranceCount >= 2 ? "good" : enduranceCount >= 1 ? "warn" : "bad",
+            detail: "Progress run tolerance & ladders",
+            meta: { importance: 9, group: "race_pillar", related: "run" },
+          },
+          {
+            label: "Strength & tissue",
+            score: strengthCount ? Math.min(100, strengthCount * 15) : 0,
+            tone: strengthCount >= 2 ? "good" : strengthCount >= 1 ? "warn" : "bad",
+            detail: `${strengthCount} strength sessions`,
+            meta: { importance: 7, group: "race_pillar", related: "strength,pt" },
+          },
+          {
+            label: "Recovery",
+            score: readinessScore,
+            tone: readinessScore >= 70 ? "good" : readinessScore >= 50 ? "warn" : "bad",
+            detail: readinessScore != null ? `Readiness ${formatNumber(readinessScore, 0)}/100` : "Readiness missing",
+            meta: { importance: 8, group: "race_pillar", related: "sleep,readiness" },
+          },
+          {
+            label: "Execution",
+            score: adherencePct != null ? adherencePct : 0,
+            tone: adherencePct >= 75 ? "good" : adherencePct >= 40 ? "warn" : "bad",
+            detail: adherencePct != null ? `Adherence ${formatNumber(adherencePct, 0)}%` : "Plan adherence missing",
+            meta: { importance: 7, group: "race_pillar", related: "adherence" },
+          },
+        ];
+
+        const limiters = [];
+        if (sleepAge == null || sleepAge >= 2) limiters.push({ label: "Sleep stale", detail: "Update Withings sleep", tone: "warn" });
+        if (weightAge == null || weightAge >= 7) limiters.push({ label: "Weight stale", detail: "Update weight data", tone: "warn" });
+        if (enduranceCount < 2) limiters.push({ label: "Endurance frequency", detail: "Aim for 2–3 sessions", tone: "warn" });
+        if (strengthCount < 2) limiters.push({ label: "Strength frequency", detail: "Aim for 2 sessions", tone: "warn" });
+        if (adherencePct != null && adherencePct < 50) limiters.push({ label: "Execution gap", detail: "Plan vs done mismatch", tone: "bad" });
+
+        pillarDefs.forEach((pillar) => {
+          posRacePillarsEl.appendChild(renderPillar(pillar));
+        });
+
+        if (posRaceLimitersListEl) {
+          limiters.slice(0, 4).forEach((limiter) => {
+            posRaceLimitersListEl.appendChild(
+              renderStatusItem(
+                limiter.label,
+                limiter.tone === "bad" ? "Critical" : "Watch",
+                limiter.tone,
+                limiter.detail,
+                { importance: 8, group: "race_limiters", related: "limiters" },
+              ),
+            );
+          });
+        }
+        if (posRaceLimitersNoteEl) {
+          posRaceLimitersNoteEl.textContent = limiters.length ? "Top blockers for race readiness." : "No major blockers.";
+        }
+
+        if (posRacePhaseListEl) {
+          posRacePhaseListEl.innerHTML = "";
+          const phase = daysToRace > 180 ? "Base" : daysToRace > 90 ? "Build" : daysToRace > 30 ? "Specific" : "Taper";
+          posRacePhaseListEl.appendChild(
+            renderPlanList("Phase", phase, { importance: 7, group: "race_phase", related: "phase" }),
+          );
+          posRacePhaseListEl.appendChild(
+            renderPlanList("Focus", "Cold swim exposure, hills, run durability", { importance: 8, group: "race_phase", related: "focus" }),
+          );
+        }
+        if (posRacePhaseNoteEl) {
+          posRacePhaseNoteEl.textContent = `${daysToRace} days to race · phase strategy.`;
         }
       }
 
@@ -3598,6 +3815,10 @@
           await loadPosSleepTrend();
           await loadPosSleepPlan();
           await loadPosStats();
+          return;
+        }
+        if (viewId === "race") {
+          await loadPosRaceReadiness();
           return;
         }
         if (viewId === "training") {
