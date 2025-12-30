@@ -1126,7 +1126,7 @@
               </div>
               <div id="pos-strava-fitness" class="pos-section hidden" data-pos-view="overview training" data-importance="9" data-group="fitness" data-related="fitness,fatigue,form">
                 <div class="row-inline">
-                  <div style="font-weight:600;">Fitness & freshness</div>
+                  <div style="font-weight:600;">Fitness & form (Strava)</div>
                   <div class="meta" id="pos-strava-note">—</div>
                 </div>
                 <div id="pos-strava-list" class="list"></div>
@@ -1962,10 +1962,10 @@
           } else if (weightStale) {
             notes.push(weightStale);
           }
-          posSummaryNoteEl.textContent = notes.length ? notes.join(" · ") : "Sources fresh";
+          posSummaryNoteEl.textContent = notes.length ? notes.join(" · ") : "Inputs current";
           if (posSummaryFreshnessEl) {
             const hasStale = notes.length > 0;
-            posSummaryFreshnessEl.textContent = hasStale ? "Needs attention" : "Up to date";
+            posSummaryFreshnessEl.textContent = hasStale ? "Stale inputs" : "Inputs current";
             posSummaryFreshnessEl.classList.remove("unknown", "ontrack", "soon", "overdue");
             posSummaryFreshnessEl.classList.add(hasStale ? "overdue" : "ontrack");
           }
@@ -2197,9 +2197,9 @@
         const training = trainingResp.data ?? {};
         const sleepAge = formatAgeDays(readiness.sleep_updated_at);
         const weightAge = formatAgeDays(readiness.weight_updated_at);
-        const sleepStatus = sleepAge != null && sleepAge < 2 ? "Fresh" : "Stale";
+        const sleepStatus = sleepAge != null && sleepAge < 2 ? "Current" : "Stale";
         const sleepTone = sleepAge != null && sleepAge < 2 ? "good" : "warn";
-        const weightStatus = weightAge != null && weightAge < 7 ? "Fresh" : "Stale";
+        const weightStatus = weightAge != null && weightAge < 7 ? "Current" : "Stale";
         const weightTone = weightAge != null && weightAge < 7 ? "good" : "warn";
 
         const nutritionDays = new Set();
@@ -2218,12 +2218,12 @@
         const stravaDate = stravaResp.data?.[0]?.date ?? null;
         const stravaAge = stravaDate ? formatAgeDays(`${stravaDate}T00:00:00`) : null;
         const stravaTone = stravaAge != null && stravaAge < 7 ? "good" : "warn";
-        const stravaStatus = stravaAge != null && stravaAge < 7 ? "Fresh" : "Stale";
+        const stravaStatus = stravaAge != null && stravaAge < 7 ? "Current" : "Stale";
 
         const strengthDate = strengthResp.data?.[0]?.session_date ?? null;
         const strengthAge = strengthDate ? formatAgeDays(`${strengthDate}T00:00:00`) : null;
         const strengthTone = strengthAge != null && strengthAge < 7 ? "good" : "warn";
-        const strengthStatus = strengthAge != null && strengthAge < 7 ? "Fresh" : "Stale";
+        const strengthStatus = strengthAge != null && strengthAge < 7 ? "Current" : "Stale";
 
         posDataHealthListEl.appendChild(
           renderStatusItem(
@@ -4256,8 +4256,8 @@
       }
 
       function frequencyBand(count) {
-        if (count >= 2) return { label: "On track", tone: "good", percent: 90 };
-        if (count === 1) return { label: "Light", tone: "warn", percent: 55 };
+        if (count >= 2) return { label: "Meets target", tone: "good", percent: 90 };
+        if (count === 1) return { label: "Below target", tone: "warn", percent: 55 };
         return { label: "Missing", tone: "bad", percent: 15 };
       }
 
@@ -4289,9 +4289,9 @@
         if (value === null || value === undefined || Number.isNaN(value)) {
           return { label: "Unknown", tone: "warn" };
         }
-        if (value >= 8) return { label: "Fresh", tone: "good" };
-        if (value >= -4) return { label: "Steady", tone: "warn" };
-        return { label: "Loaded", tone: "bad" };
+        if (value >= 8) return { label: "Form high", tone: "good" };
+        if (value >= -4) return { label: "Form neutral", tone: "warn" };
+        return { label: "Form low", tone: "bad" };
       }
 
       function renderSparkline(values, color = "rgba(56,189,248,0.9)") {
