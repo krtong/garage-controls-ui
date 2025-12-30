@@ -1327,6 +1327,17 @@
         return sum / values.length;
       }
 
+      function trendDelta(values) {
+        if (!values || values.length < 4) return null;
+        const mid = Math.floor(values.length / 2);
+        const recent = values.slice(mid);
+        const prior = values.slice(0, mid);
+        const recentAvg = average(recent);
+        const priorAvg = average(prior);
+        if (recentAvg == null || priorAvg == null) return null;
+        return recentAvg - priorAvg;
+      }
+
       function startOfWeekSunday(date) {
         const start = new Date(date);
         const day = start.getDay();
@@ -1721,6 +1732,10 @@
             const wattsSeries = item.series.watts.slice(0, 6).reverse();
             const speedSeries = item.series.speed.slice(0, 6).reverse();
             const ampSeries = item.series.amplitude.slice(0, 6).reverse();
+            const qualityDelta = trendDelta(qualitySeries);
+            const wattsDelta = trendDelta(wattsSeries);
+            const speedDelta = trendDelta(speedSeries);
+            const ampDelta = trendDelta(ampSeries);
             const baseline = baselineMap.get(item.id);
             return {
               id: item.id,
@@ -1732,6 +1747,12 @@
               wattsSeries,
               speedSeries,
               ampSeries,
+              deltas: {
+                quality: qualityDelta,
+                watts: wattsDelta,
+                speed: speedDelta,
+                amplitude: ampDelta,
+              },
               baseline,
             };
           })
@@ -1773,6 +1794,20 @@
               }
             }
             const statsLine = statParts.join(" · ");
+            const deltaParts = [];
+            if (item.deltas.quality != null) {
+              deltaParts.push(`ΔQ ${formatNumber(item.deltas.quality, 1)}`);
+            }
+            if (item.deltas.watts != null) {
+              deltaParts.push(`ΔW ${formatNumber(item.deltas.watts, 0)}`);
+            }
+            if (item.deltas.speed != null) {
+              deltaParts.push(`ΔS ${formatNumber(item.deltas.speed, 2)}`);
+            }
+            if (item.deltas.amplitude != null) {
+              deltaParts.push(`ΔROM ${formatNumber(item.deltas.amplitude, 2)}`);
+            }
+            const deltaLine = deltaParts.length ? `Recent trend: ${deltaParts.join(" · ")}` : "";
             const trendBlocks = [];
             if (qualitySpark) {
               trendBlocks.push(`
@@ -1818,6 +1853,7 @@
               <div class="trend-block">
                 ${trendBlocks.length ? `<div class="trend-lines">${trendBlocks.join("")}</div>` : ""}
                 ${statsLine ? `<div class="trend-stats">${statsLine}</div>` : ""}
+                ${deltaLine ? `<div class="trend-stats">${deltaLine}</div>` : ""}
               </div>
             `;
             posQualityTrendsListEl.appendChild(renderStatList(item.name, scoreLabel, meta));
