@@ -212,6 +212,15 @@
       .bar-fill.good { background: var(--success); }
       .bar-fill.warn { background: #f59e0b; }
       .bar-fill.bad { background: var(--danger); }
+      .trend-inline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .trend-spark {
+        width: 140px;
+      }
       .list {
         display: grid;
         gap: 10px;
@@ -271,6 +280,45 @@
         display: grid;
         gap: 8px;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .kpi-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+      .kpi-card {
+        border-radius: 16px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        padding: 12px 14px;
+        background: rgba(9, 13, 26, 0.75);
+        display: grid;
+        gap: 8px;
+      }
+      .kpi-title {
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .kpi-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .kpi-sub {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .kpi-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(14, 165, 233, 0.15);
+        color: var(--accent);
+        font-size: 18px;
       }
       .state-metric {
         background: rgba(12, 18, 34, 0.7);
@@ -523,7 +571,7 @@
             <div id="pos-summary-freshness" class="pill unknown">Freshness</div>
             <div id="pos-run-status" class="pill unknown">Last run</div>
           </div>
-          <div id="pos-summary-metrics" class="state-metrics"></div>
+          <div id="pos-summary-metrics" class="kpi-grid"></div>
           <div class="meta" id="pos-summary-note"></div>
         </div>
         <div id="pos-plan" class="card grid hidden">
@@ -533,6 +581,13 @@
           </div>
           <div id="pos-plan-body" class="list"></div>
           <div class="meta" id="pos-plan-note"></div>
+        </div>
+        <div id="pos-trends" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Trends (7d)</div>
+            <div class="meta" id="pos-trends-note">—</div>
+          </div>
+          <div id="pos-trends-list" class="list"></div>
         </div>
         <div id="pos-stats" class="card grid hidden">
           <div class="row-inline">
@@ -625,6 +680,9 @@
       const posPlanBodyEl = document.getElementById("pos-plan-body");
       const posPlanDateEl = document.getElementById("pos-plan-date");
       const posPlanNoteEl = document.getElementById("pos-plan-note");
+      const posTrendsEl = document.getElementById("pos-trends");
+      const posTrendsListEl = document.getElementById("pos-trends-list");
+      const posTrendsNoteEl = document.getElementById("pos-trends-note");
       const posStatsEl = document.getElementById("pos-stats");
       const posStatsListEl = document.getElementById("pos-stats-list");
       const posStatsRangeEl = document.getElementById("pos-stats-range");
@@ -668,6 +726,7 @@
           hiddenIds: [
             "pos-summary",
             "pos-plan",
+            "pos-trends",
             "pos-stats",
             "pos-nutrition",
             "pos-baselines",
@@ -682,6 +741,7 @@
           visibleIds: [
             "pos-summary",
             "pos-plan",
+            "pos-trends",
             "pos-stats",
             "pos-nutrition",
             "pos-baselines",
@@ -984,39 +1044,71 @@
           .select("readiness_score,updated_at,sleep_source,weight_source,sleep_updated_at,weight_updated_at")
           .eq("id", "global")
           .maybeSingle();
+        const metricsReq = supabase
+          .from("pos_day_metrics")
+          .select("adherence_7d,training_load_7d,updated_at")
+          .order("date", { ascending: false })
+          .limit(1);
         const runReq = supabase
           .from("pos_runs")
           .select("ran_at,ok")
           .order("ran_at", { ascending: false })
           .limit(1);
 
-        const [{ data: training, error: trainingError }, { data: readiness }, { data: runData }] = await Promise.all([
-          trainingReq,
-          readinessReq,
-          runReq,
-        ]);
+        const [
+          { data: training, error: trainingError },
+          { data: readiness },
+          { data: metricsRows },
+          { data: runData },
+        ] = await Promise.all([trainingReq, readinessReq, metricsReq, runReq]);
         const runRow = Array.isArray(runData) && runData.length ? runData[0] : null;
+        const metrics = metricsRows?.[0] ?? null;
 
         if (trainingError) {
           if (posSummaryNoteEl) posSummaryNoteEl.textContent = "Training summary unavailable.";
           return;
         }
 
-        const metrics = [
-          { label: "Workouts (7d)", band: frequencyBand(training?.workout_count_7d ?? 0) },
-          { label: "Endurance (7d)", band: frequencyBand(training?.endurance_sessions_7d ?? 0) },
-          { label: "Strength (7d)", band: frequencyBand(training?.strength_sessions_7d ?? 0) },
-          { label: "Strength time", band: durationBand((training?.strength_time_s_7d ?? 0) / 60) },
-          { label: "Strength load", band: loadBand(training?.strength_capacity_7d ?? 0) },
-          { label: "Distance (7d)", band: training?.total_distance_m_7d ? { label: "Logged", tone: "good", percent: 70 } : { label: "Missing", tone: "bad", percent: 10 } },
-          { label: "Readiness", band: bandFromScore(readiness?.readiness_score) },
-        ];
+        const readinessBand = bandFromScore(readiness?.readiness_score);
+        const adherence = metrics?.adherence_7d ?? 0;
+        const adherenceTone = adherence >= 0.75 ? "good" : adherence >= 0.4 ? "warn" : "bad";
 
-        metrics.forEach((metric) => {
-          posSummaryMetricsEl.appendChild(
-            renderBarItem(metric.label, metric.band.label, metric.band.tone, metric.band.percent)
-          );
-        });
+        posSummaryMetricsEl.appendChild(
+          renderKpiCard({
+            label: "Readiness",
+            value: readinessBand.label,
+            tone: readinessBand.tone,
+            icon: "⚡️",
+            sub: "How ready you are today",
+          }),
+        );
+        posSummaryMetricsEl.appendChild(
+          renderKpiCard({
+            label: "Workouts (7d)",
+            value: `${training?.workout_count_7d ?? 0}`,
+            tone: frequencyBand(training?.workout_count_7d ?? 0).tone,
+            icon: "📅",
+            sub: "Sessions logged this week",
+          }),
+        );
+        posSummaryMetricsEl.appendChild(
+          renderKpiCard({
+            label: "Adherence (7d)",
+            value: adherence ? `${Math.round(adherence * 100)}%` : "—",
+            tone: adherenceTone,
+            icon: "✅",
+            sub: "Planned vs completed",
+          }),
+        );
+        posSummaryMetricsEl.appendChild(
+          renderKpiCard({
+            label: "Strength load",
+            value: training?.strength_capacity_7d ? "Tracked" : "Missing",
+            tone: training?.strength_capacity_7d ? "good" : "bad",
+            icon: "🏋️",
+            sub: "Speediance volume signal",
+          }),
+        );
 
         const updatedAt = training?.updated_at ?? readiness?.updated_at;
         if (posSummaryUpdatedEl) {
@@ -1060,6 +1152,111 @@
             posRunStatusEl.classList.remove("ontrack", "soon", "overdue");
             posRunStatusEl.classList.add("unknown");
           }
+        }
+      }
+
+      function trendBadge(values) {
+        if (!values || values.length < 2) {
+          return { label: "Flat", tone: "warn" };
+        }
+        const first = values[0] ?? 0;
+        const last = values[values.length - 1] ?? 0;
+        const delta = last - first;
+        if (Math.abs(delta) < 0.01) return { label: "Flat", tone: "warn" };
+        return delta > 0 ? { label: "Up", tone: "good" } : { label: "Down", tone: "bad" };
+      }
+
+      async function loadPosTrends() {
+        if (!posTrendsListEl || !posTrendsEl) return;
+        posTrendsListEl.innerHTML = "";
+        if (posTrendsNoteEl) posTrendsNoteEl.textContent = "";
+
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - 6);
+        const startIso = start.toISOString();
+        const days = [];
+        for (let i = 0; i < 7; i += 1) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          const key = dateKeyFromIso(d.toISOString());
+          days.push(key);
+        }
+
+        const [metricsResp, stravaResp, strengthResp] = await Promise.all([
+          supabase
+            .from("pos_day_metrics")
+            .select("date,training_load_today")
+            .gte("date", startIso)
+            .order("date", { ascending: true }),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "strava")
+            .eq("event_type", "activity")
+            .gte("event_timestamp", startIso),
+          supabase
+            .from("speediance_training_session_scores")
+            .select("session_date")
+            .gte("session_date", start.toISOString().slice(0, 10)),
+        ]);
+
+        const loadMap = new Map();
+        (metricsResp.data || []).forEach((row) => {
+          if (row.date) {
+            loadMap.set(row.date, Number(row.training_load_today ?? 0));
+          }
+        });
+
+        const distanceByDay = new Map();
+        (stravaResp.data || []).forEach((row) => {
+          const key = dateKeyFromIso(row.event_timestamp);
+          if (!key) return;
+          const payload = row.payload || {};
+          const distance = Number(payload.distance_m ?? payload.distance ?? 0);
+          if (!Number.isNaN(distance) && distance > 0) {
+            distanceByDay.set(key, (distanceByDay.get(key) || 0) + distance);
+          }
+        });
+
+        const strengthByDay = new Map();
+        (strengthResp.data || []).forEach((row) => {
+          const key = row.session_date || null;
+          if (!key) return;
+          strengthByDay.set(key, (strengthByDay.get(key) || 0) + 1);
+        });
+
+        const loadSeries = days.map((d) => loadMap.get(d) || 0);
+        const distanceSeries = days.map((d) => distanceByDay.get(d) || 0);
+        const strengthSeries = days.map((d) => strengthByDay.get(d) || 0);
+
+        const loadTrend = trendBadge(loadSeries);
+        const enduranceTrend = trendBadge(distanceSeries);
+        const strengthTrend = trendBadge(strengthSeries);
+
+        const loadEntry = renderStatusItem("Training load", loadTrend.label, loadTrend.tone, "Overall stress trend");
+        const loadSpark = document.createElement("div");
+        loadSpark.className = "trend-spark";
+        loadSpark.innerHTML = renderSparkline(loadSeries, "rgba(56,189,248,0.9)");
+        loadEntry.appendChild(loadSpark);
+        posTrendsListEl.appendChild(loadEntry);
+
+        const enduranceEntry = renderStatusItem("Endurance distance", enduranceTrend.label, enduranceTrend.tone, "Swim + bike + run");
+        const enduranceSpark = document.createElement("div");
+        enduranceSpark.className = "trend-spark";
+        enduranceSpark.innerHTML = renderSparkline(distanceSeries, "rgba(16,185,129,0.9)");
+        enduranceEntry.appendChild(enduranceSpark);
+        posTrendsListEl.appendChild(enduranceEntry);
+
+        const strengthEntry = renderStatusItem("Strength sessions", strengthTrend.label, strengthTrend.tone, "Speediance volume");
+        const strengthSpark = document.createElement("div");
+        strengthSpark.className = "trend-spark";
+        strengthSpark.innerHTML = renderSparkline(strengthSeries, "rgba(129,140,248,0.9)");
+        strengthEntry.appendChild(strengthSpark);
+        posTrendsListEl.appendChild(strengthEntry);
+
+        if (posTrendsNoteEl) {
+          posTrendsNoteEl.textContent = "Momentum signals for the last 7 days.";
         }
       }
 
@@ -1272,6 +1469,7 @@
         if (currentView === "pos") {
           await loadPosSummary();
           await loadPosPlan();
+          await loadPosTrends();
           await loadPosStats();
           await loadPosNutrition();
           await loadPosBaselines();
@@ -1332,6 +1530,22 @@
         return `${lookup.year}-${lookup.month}-${lookup.day}`;
       }
 
+      function dateKeyFromIso(value) {
+        if (!value) return null;
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        const parts = new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).formatToParts(date);
+        const lookup = {};
+        parts.forEach((part) => {
+          if (part.type !== "literal") lookup[part.type] = part.value;
+        });
+        return `${lookup.year}-${lookup.month}-${lookup.day}`;
+      }
+
       function renderPlanList(title, value) {
         const item = document.createElement("div");
         item.className = "list-item";
@@ -1348,6 +1562,27 @@
           ${meta ? `<div class="list-row">${meta}</div>` : ""}
         `;
         return item;
+      }
+
+      function renderKpiCard({ label, value, tone = "good", icon = "•", sub = "" }) {
+        const card = document.createElement("div");
+        card.className = "kpi-card";
+        card.innerHTML = `
+          <div class="row-inline">
+            <div class="kpi-title">${label}</div>
+            <div class="kpi-icon">${icon}</div>
+          </div>
+          <div class="kpi-value">${value}</div>
+          <div class="kpi-sub">${sub}</div>
+        `;
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        const fill = document.createElement("div");
+        fill.className = `bar-fill ${tone}`;
+        fill.style.width = tone === "good" ? "90%" : tone === "warn" ? "55%" : "25%";
+        bar.appendChild(fill);
+        card.appendChild(bar);
+        return card;
       }
 
       function renderStatusItem(title, status, tone = "good", meta = "") {
