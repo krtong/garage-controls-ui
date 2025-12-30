@@ -1810,9 +1810,12 @@
           const sleepDelta = sleepSeconds != null && sleepBaseline != null
             ? sleepSeconds / 3600 - sleepBaseline / 3600
             : null;
+          const sleepAgeLabel = sleepAge != null ? (sleepAge >= 10 ? formatNumber(sleepAge, 0) : formatNumber(sleepAge, 1)) : null;
+          const weightAgeLabel = weightAge != null ? (weightAge >= 10 ? formatNumber(weightAge, 0) : formatNumber(weightAge, 1)) : null;
+
           if (sleepAge != null && sleepAge >= 2) {
             drivers.push({
-              label: `Sleep stale ${formatNumber(sleepAge, 1)}d`,
+              label: `Sleep stale ${sleepAgeLabel}d`,
               tone: "warn",
               meta: { importance: 9, group: "drivers", related: "sleep" },
             });
@@ -1855,7 +1858,7 @@
           }
           if (weightAge != null && weightAge >= 7) {
             drivers.push({
-              label: `Weight stale ${formatNumber(weightAge, 1)}d`,
+              label: `Weight stale ${weightAgeLabel}d`,
               tone: "warn",
               meta: { importance: 5, group: "drivers", related: "weight" },
             });
@@ -4080,7 +4083,14 @@
 
         if (posNutritionNoteEl) {
           const entries = nutritionResp.data?.length ?? 0;
-          posNutritionNoteEl.textContent = entries ? `${entries} logs in ${rangeLabel(currentRangeDays).toLowerCase()}` : "No logs yet.";
+          const noteParts = [];
+          noteParts.push(entries ? `${entries} logs in ${rangeLabel(currentRangeDays).toLowerCase()}` : "No logs yet.");
+          if (!targets?.calories_target) {
+            noteParts.push("Targets missing");
+          } else {
+            noteParts.push("Scale cap = 120% of target");
+          }
+          posNutritionNoteEl.textContent = noteParts.join(" · ");
         }
 
         const rows = [
@@ -4093,8 +4103,20 @@
         rows.forEach((row) => {
           const actualVal = row.actual;
           const targetVal = row.target;
-          if (!targetVal || actualVal == null || Number.isNaN(actualVal)) {
+          if (actualVal == null || Number.isNaN(actualVal)) {
             posNutritionListEl.appendChild(renderStatusItem(row.label, "No data", "warn", "Needs logging", row.meta));
+            return;
+          }
+          if (!targetVal || Number.isNaN(Number(targetVal))) {
+            posNutritionListEl.appendChild(
+              renderStatusItem(
+                row.label,
+                `${formatNumber(actualVal, row.unit === "kcal" ? 0 : 1)} ${row.unit}`,
+                "warn",
+                "Target missing",
+                row.meta,
+              ),
+            );
             return;
           }
           posNutritionListEl.appendChild(
