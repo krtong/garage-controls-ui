@@ -1555,6 +1555,7 @@
             icon: "⚡️",
             sub: readiness?.readiness_score != null ? `Score ${readiness.readiness_score}/100` : "Score missing",
             progress: readiness?.readiness_score,
+            meta: { importance: 10, group: "readiness", related: "sleep,form,fatigue" },
           }),
         );
         posSummaryMetricsEl.appendChild(
@@ -1564,6 +1565,7 @@
             tone: frequencyBand(training?.workout_count_7d ?? 0).tone,
             icon: "📅",
             sub: `Endurance ${training?.endurance_sessions_7d ?? 0} · Strength ${training?.strength_sessions_7d ?? 0}`,
+            meta: { importance: 8, group: "training_volume", related: "endurance,strength" },
           }),
         );
         posSummaryMetricsEl.appendChild(
@@ -1574,6 +1576,7 @@
             icon: "✅",
             sub: adherence ? `Planned vs completed` : "No plan data",
             progress: adherence ? adherence * 100 : null,
+            meta: { importance: 9, group: "execution", related: "plan,completion" },
           }),
         );
         posSummaryMetricsEl.appendChild(
@@ -1583,6 +1586,7 @@
             tone: training?.strength_capacity_7d ? "good" : "bad",
             icon: "🏋️",
             sub: training?.strength_capacity_7d ? "7d capacity (load)" : "No strength load data",
+            meta: { importance: 7, group: "strength_load", related: "capacity,volume" },
           }),
         );
 
@@ -1669,7 +1673,13 @@
         if (sleepDelta != null) sleepMetaParts.push(`Δ ${formatNumber(sleepDelta, 1)} h`);
         if (sleepAge != null) sleepMetaParts.push(`updated ${formatNumber(sleepAge, 1)}d ago`);
         posRecoveryListEl.appendChild(
-          renderStatusItem("Sleep", sleepHours != null ? "Tracked" : "Missing", sleepTone, sleepMetaParts.join(" · ") || "No sleep data"),
+          renderStatusItem(
+            "Sleep",
+            sleepHours != null ? "Tracked" : "Missing",
+            sleepTone,
+            sleepMetaParts.join(" · ") || "No sleep data",
+            { importance: 9, group: "sleep", related: "duration,baseline,delta" },
+          ),
         );
 
         const weight = metrics.weight_kg ?? null;
@@ -1683,7 +1693,13 @@
         if (weightDelta != null) weightMetaParts.push(`Δ ${formatNumber(weightDelta, 1)} kg`);
         if (weightAge != null) weightMetaParts.push(`updated ${formatNumber(weightAge, 1)}d ago`);
         posRecoveryListEl.appendChild(
-          renderStatusItem("Weight", weight != null ? "Tracked" : "Missing", weightTone, weightMetaParts.join(" · ") || "No weight data"),
+          renderStatusItem(
+            "Weight",
+            weight != null ? "Tracked" : "Missing",
+            weightTone,
+            weightMetaParts.join(" · ") || "No weight data",
+            { importance: 5, group: "weight", related: "trend,baseline" },
+          ),
         );
 
         if (metrics.hrv_baseline_7d != null) {
@@ -1693,6 +1709,7 @@
               `${formatNumber(metrics.hrv_baseline_7d, 0)}`,
               "warn",
               "Baseline only (current HRV not ingested)",
+              { importance: 4, group: "hrv", related: "baseline" },
             ),
           );
         }
@@ -1703,6 +1720,7 @@
               `${formatNumber(metrics.rhr_baseline_7d, 0)} bpm`,
               "warn",
               "Baseline only (current RHR not ingested)",
+              { importance: 4, group: "rhr", related: "baseline" },
             ),
           );
         }
@@ -1745,7 +1763,14 @@
           const band = formBand(last.form);
           const label = sport === "all" ? "Overall" : sport.charAt(0).toUpperCase() + sport.slice(1);
           const meta = `Fitness ${formatNumber(last.fitness, 1)} · Fatigue ${formatNumber(last.fatigue, 1)} · Form ${formatNumber(last.form, 1)} · Δ${currentRangeDays}d ${formatNumber(deltaForm, 1)}`;
-          posStravaListEl.appendChild(renderStatusItem(label, band.label, band.tone, meta));
+          const importance = sport === "all" ? 9 : 8;
+          posStravaListEl.appendChild(
+            renderStatusItem(label, band.label, band.tone, meta, {
+              importance,
+              group: "fitness",
+              related: "fitness,fatigue,form",
+            }),
+          );
         });
 
         const chartRows = bySport.all || bySport.running || bySport.cycling || bySport.swimming || [];
@@ -1849,7 +1874,8 @@
           "Training load",
           loadTrend.label,
           loadTrend.tone,
-          `Avg ${formatNumber(loadAvg, 0)} · Min ${formatNumber(loadMin, 0)} · Max ${formatNumber(loadMax, 0)}`
+          `Avg ${formatNumber(loadAvg, 0)} · Min ${formatNumber(loadMin, 0)} · Max ${formatNumber(loadMax, 0)}`,
+          { importance: 7, group: "momentum", related: "training_load" },
         );
         const loadSpark = document.createElement("div");
         loadSpark.className = "trend-spark";
@@ -1868,7 +1894,8 @@
           "Endurance distance",
           enduranceTrend.label,
           enduranceTrend.tone,
-          `Total ${formatNumber(formatMiles(distanceTotal) ?? 0, 1)} mi · Min ${formatNumber(formatMiles(distanceMin) ?? 0, 1)} · Max ${formatNumber(formatMiles(distanceMax) ?? 0, 1)}`
+          `Total ${formatNumber(formatMiles(distanceTotal) ?? 0, 1)} mi · Min ${formatNumber(formatMiles(distanceMin) ?? 0, 1)} · Max ${formatNumber(formatMiles(distanceMax) ?? 0, 1)}`,
+          { importance: 6, group: "endurance", related: "distance,volume" },
         );
         const enduranceSpark = document.createElement("div");
         enduranceSpark.className = "trend-spark";
@@ -1887,7 +1914,8 @@
           "Strength sessions",
           strengthTrend.label,
           strengthTrend.tone,
-          `${strengthTotal} sessions · Min ${strengthMin} · Max ${strengthMax}`
+          `${strengthTotal} sessions · Min ${strengthMin} · Max ${strengthMax}`,
+          { importance: 6, group: "strength", related: "sessions" },
         );
         const strengthSpark = document.createElement("div");
         strengthSpark.className = "trend-spark";
@@ -2169,17 +2197,17 @@
         const target = baselineHours || 7;
         const delta = sleepHours != null ? target - sleepHours : null;
 
-        posSleepPlanListEl.appendChild(renderPlanList("Last night", sleepHours != null ? `${formatNumber(sleepHours, 1)} h` : "No sleep logged"));
-        posSleepPlanListEl.appendChild(renderPlanList("Target tonight", `${formatNumber(target, 1)} h`));
+        posSleepPlanListEl.appendChild(renderPlanList("Last night", sleepHours != null ? `${formatNumber(sleepHours, 1)} h` : "No sleep logged", { importance: 8, group: "sleep_plan", related: "last_night" }));
+        posSleepPlanListEl.appendChild(renderPlanList("Target tonight", `${formatNumber(target, 1)} h`, { importance: 9, group: "sleep_plan", related: "target" }));
 
         if (delta != null && delta > 0.5) {
-          posSleepPlanListEl.appendChild(renderPlanList("Make up sleep", `Aim for +${formatNumber(delta, 1)} h`));
-          posSleepPlanListEl.appendChild(renderPlanList("Wind down", "No caffeine after 2pm · screens off 30 min before bed"));
-          posSleepPlanListEl.appendChild(renderPlanList("Environment", "Cool room, low light, same bedtime/wake time"));
+          posSleepPlanListEl.appendChild(renderPlanList("Make up sleep", `Aim for +${formatNumber(delta, 1)} h`, { importance: 7, group: "sleep_plan", related: "recovery" }));
+          posSleepPlanListEl.appendChild(renderPlanList("Wind down", "No caffeine after 2pm · screens off 30 min before bed", { importance: 6, group: "sleep_plan", related: "behavior" }));
+          posSleepPlanListEl.appendChild(renderPlanList("Environment", "Cool room, low light, same bedtime/wake time", { importance: 6, group: "sleep_plan", related: "environment" }));
         } else if (sleepHours != null) {
-          posSleepPlanListEl.appendChild(renderPlanList("Consistency", "Keep bedtime steady and protect 30 min wind-down"));
+          posSleepPlanListEl.appendChild(renderPlanList("Consistency", "Keep bedtime steady and protect 30 min wind-down", { importance: 6, group: "sleep_plan", related: "consistency" }));
         } else {
-          posSleepPlanListEl.appendChild(renderPlanList("Next step", "Log sleep to unlock readiness guidance."));
+          posSleepPlanListEl.appendChild(renderPlanList("Next step", "Log sleep to unlock readiness guidance.", { importance: 5, group: "sleep_plan", related: "logging" }));
         }
 
         if (posSleepPlanNoteEl) {
@@ -2577,14 +2605,24 @@
         }
       }
 
-      function renderPlanList(title, value) {
+      function attachMeta(el, meta) {
+        if (!el || !meta) return;
+        if (meta.importance !== undefined) {
+          el.dataset.importance = String(meta.importance);
+        }
+        if (meta.group) el.dataset.group = meta.group;
+        if (meta.related) el.dataset.related = meta.related;
+      }
+
+      function renderPlanList(title, value, metricMeta = null) {
         const item = document.createElement("div");
         item.className = "list-item";
         item.innerHTML = `<div class="list-title">${title}</div><div class="list-meta">${value}</div>`;
+        attachMeta(item, metricMeta);
         return item;
       }
 
-      function renderStatList(title, value, meta) {
+      function renderStatList(title, value, meta, metricMeta = null) {
         const item = document.createElement("div");
         item.className = "list-item";
         item.innerHTML = `
@@ -2592,10 +2630,11 @@
           <div class="list-meta">${value}</div>
           ${meta ? `<div class="list-row">${meta}</div>` : ""}
         `;
+        attachMeta(item, metricMeta);
         return item;
       }
 
-      function renderKpiCard({ label, value, tone = "good", icon = "•", sub = "", progress = null }) {
+      function renderKpiCard({ label, value, tone = "good", icon = "•", sub = "", progress = null, meta = null }) {
         const card = document.createElement("div");
         card.className = "kpi-card";
         card.innerHTML = `
@@ -2606,6 +2645,7 @@
           <div class="kpi-value">${value}</div>
           <div class="kpi-sub">${sub}</div>
         `;
+        attachMeta(card, meta);
         if (progress !== null && progress !== undefined && !Number.isNaN(progress)) {
           const bar = document.createElement("div");
           bar.className = "bar";
@@ -2618,7 +2658,7 @@
         return card;
       }
 
-      function renderStatusItem(title, status, tone = "good", meta = "") {
+      function renderStatusItem(title, status, tone = "good", meta = "", metricMeta = null) {
         const item = document.createElement("div");
         item.className = "list-item";
         const metaHtml = meta ? `<div class="list-meta">${meta}</div>` : "";
@@ -2627,10 +2667,11 @@
         chip.className = `status-chip ${tone}`;
         chip.textContent = status;
         item.appendChild(chip);
+        attachMeta(item, metricMeta);
         return item;
       }
 
-      function renderBarItem(title, status, tone = "good", percent = 60, meta = "") {
+      function renderBarItem(title, status, tone = "good", percent = 60, meta = "", metricMeta = null) {
         const item = document.createElement("div");
         item.className = "list-item";
         const metaHtml = meta ? `<div class="list-meta">${meta}</div>` : "";
@@ -2639,6 +2680,7 @@
         chip.className = `status-chip ${tone}`;
         chip.textContent = status;
         item.appendChild(chip);
+        attachMeta(item, metricMeta);
         const bar = document.createElement("div");
         bar.className = "bar";
         const fill = document.createElement("div");
@@ -2649,16 +2691,16 @@
         return item;
       }
 
-      function renderGoalBar({ label, actual, target, unit }) {
+      function renderGoalBar({ label, actual, target, unit, meta = null }) {
         const ratio = target ? actual / target : 0;
         const percent = Math.round(ratio * 100);
         const status = ratio >= 1.1 ? "High" : ratio >= 0.9 ? "On target" : ratio >= 0.6 ? "Low" : "Very low";
         const tone = ratio >= 0.9 && ratio <= 1.1 ? "good" : ratio >= 0.6 ? "warn" : "bad";
-        const meta = `${formatNumber(actual, 1)} ${unit} / ${formatNumber(target, 0)} ${unit} (${percent}%)`;
+        const metaText = `${formatNumber(actual, 1)} ${unit} / ${formatNumber(target, 0)} ${unit} (${percent}%)`;
 
         const item = document.createElement("div");
         item.className = "list-item";
-        item.innerHTML = `<div class="list-title">${label}</div><div class="list-meta">${meta}</div>`;
+        item.innerHTML = `<div class="list-title">${label}</div><div class="list-meta">${metaText}</div>`;
         const chip = document.createElement("div");
         chip.className = `status-chip ${tone}`;
         chip.textContent = status;
@@ -2680,10 +2722,11 @@
         bar.appendChild(tickLow);
         bar.appendChild(tickTarget);
         item.appendChild(bar);
+        attachMeta(item, meta);
         return item;
       }
 
-      function renderBullet({ label, actual, target, unit }) {
+      function renderBullet({ label, actual, target, unit, meta = null }) {
         const safeTarget = Number(target ?? 0);
         const safeActual = Number(actual ?? 0);
         const ratio = safeTarget > 0 ? safeActual / safeTarget : 0;
@@ -2691,11 +2734,11 @@
         const status = ratio >= 1.1 ? "High" : ratio >= 0.9 ? "On target" : ratio >= 0.6 ? "Low" : "Very low";
         const tone = ratio >= 0.9 && ratio <= 1.1 ? "good" : ratio >= 0.6 ? "warn" : "bad";
         const decimals = unit === "kcal" ? 0 : 1;
-        const meta = `Avg ${formatNumber(safeActual, decimals)} ${unit} · Target ${formatNumber(safeTarget, 0)} ${unit} (${Number.isFinite(percent) ? percent : 0}%)`;
+        const metaText = `Avg ${formatNumber(safeActual, decimals)} ${unit} · Target ${formatNumber(safeTarget, 0)} ${unit} (${Number.isFinite(percent) ? percent : 0}%)`;
 
         const item = document.createElement("div");
         item.className = "list-item";
-        item.innerHTML = `<div class="list-title">${label}</div><div class="list-meta">${meta}</div>`;
+        item.innerHTML = `<div class="list-title">${label}</div><div class="list-meta">${metaText}</div>`;
         const chip = document.createElement("div");
         chip.className = `status-chip ${tone}`;
         chip.textContent = status;
@@ -2726,6 +2769,7 @@
           <span>${formatNumber(scaleMax, 0)} ${unit}</span>
         `;
         item.appendChild(scale);
+        attachMeta(item, meta);
         return item;
       }
 
@@ -2798,7 +2842,7 @@
         return sum / values.length;
       }
 
-      function renderMacroDonut({ proteinPct, carbsPct, fatPct }) {
+      function renderMacroDonut({ proteinPct, carbsPct, fatPct, meta = null }) {
         const donut = document.createElement("div");
         donut.className = "donut-card";
         const p = Math.round(proteinPct);
@@ -2817,6 +2861,7 @@
             <div class="legend-item"><span class="legend-swatch swatch-fat"></span>Fat ${f}%</div>
           </div>
         `;
+        attachMeta(donut, meta);
         return donut;
       }
 
@@ -3146,16 +3191,30 @@
           },
         ];
 
+        const statMeta = {
+          "Miles ridden": { importance: 5, group: "endurance", related: "cycling" },
+          "Yards swam": { importance: 5, group: "endurance", related: "swim" },
+          Steps: { importance: 4, group: "activity", related: "steps" },
+          "Resting calories": { importance: 4, group: "energy", related: "bmr" },
+          "Active calories": { importance: 5, group: "energy", related: "active" },
+          "Exercise hours": { importance: 6, group: "training_volume", related: "duration" },
+          "Calories eaten": { importance: 6, group: "nutrition", related: "calories" },
+          Protein: { importance: 7, group: "nutrition", related: "protein" },
+          Carbs: { importance: 5, group: "nutrition", related: "carbs" },
+          Fat: { importance: 5, group: "nutrition", related: "fat" },
+        };
+
         stats.forEach((stat) => {
+          const meta = statMeta[stat.label];
           if (stat.total === null || stat.total === undefined || Number.isNaN(stat.total) || stat.total === 0) {
-            posStatsListEl.appendChild(renderStatusItem(stat.label, "No data", "bad", "Log source to unlock."));
+            posStatsListEl.appendChild(renderStatusItem(stat.label, "No data", "bad", "Log source to unlock.", meta));
             return;
           }
           const avg = stat.total / daysElapsed;
           const decimals = stat.unit === "steps" ? 0 : 1;
           const avgLabel = `${formatNumber(avg, decimals)} ${stat.unit}/day`;
           const totalLabel = `Total ${formatNumber(stat.total, decimals)} ${stat.unit}`;
-          posStatsListEl.appendChild(renderStatusItem(stat.label, "Tracked", "good", `${avgLabel} · ${totalLabel}`));
+          posStatsListEl.appendChild(renderStatusItem(stat.label, "Tracked", "good", `${avgLabel} · ${totalLabel}`, meta));
         });
 
         if (!nutritionResp.data?.length && posStatsNoteEl) {
@@ -3181,7 +3240,15 @@
           .gte("event_timestamp", weekStartIso);
 
         if (error || !data || !data.length) {
-          posAppleHealthListEl.appendChild(renderStatusItem("Apple Health", "No data", "warn", "No metrics logged this week."));
+          posAppleHealthListEl.appendChild(
+            renderStatusItem(
+              "Apple Health",
+              "No data",
+              "warn",
+              "No metrics logged this week.",
+              { importance: 5, group: "activity", related: "steps,calories,exercise" },
+            ),
+          );
           return;
         }
 
@@ -3212,21 +3279,21 @@
         });
 
         const entries = [
-          { label: "Steps", total: steps, unit: "steps" },
-          { label: "Active calories", total: activeCalories, unit: "kcal" },
-          { label: "Resting calories", total: restingCalories, unit: "kcal" },
-          { label: "Exercise minutes", total: exerciseMinutes, unit: "min" },
+          { label: "Steps", total: steps, unit: "steps", meta: { importance: 4, group: "activity", related: "steps" } },
+          { label: "Active calories", total: activeCalories, unit: "kcal", meta: { importance: 5, group: "energy", related: "active_calories" } },
+          { label: "Resting calories", total: restingCalories, unit: "kcal", meta: { importance: 4, group: "energy", related: "resting_calories" } },
+          { label: "Exercise minutes", total: exerciseMinutes, unit: "min", meta: { importance: 5, group: "activity", related: "exercise_minutes" } },
         ];
 
         entries.forEach((entry) => {
           if (!entry.total || Number.isNaN(entry.total)) {
-            posAppleHealthListEl.appendChild(renderStatusItem(entry.label, "Missing", "bad", "No entries"));
+            posAppleHealthListEl.appendChild(renderStatusItem(entry.label, "Missing", "bad", "No entries", entry.meta));
             return;
           }
           const avg = entry.total / daysElapsed;
           const decimals = entry.unit === "steps" ? 0 : 1;
           const meta = `Avg ${formatNumber(avg, decimals)} ${entry.unit}/day · Total ${formatNumber(entry.total, decimals)} ${entry.unit}`;
-          posAppleHealthListEl.appendChild(renderStatusItem(entry.label, "Tracked", "good", meta));
+          posAppleHealthListEl.appendChild(renderStatusItem(entry.label, "Tracked", "good", meta, entry.meta));
         });
 
         if (posAppleHealthNoteEl) {
@@ -3293,17 +3360,17 @@
         }
 
         const rows = [
-          { label: "Calories", actual: hasTotals ? totals.calories / Math.max(1, currentRangeDays) : metrics?.calories_avg_day, target: targets.calories_target, unit: "kcal" },
-          { label: "Protein", actual: hasTotals ? totals.protein / Math.max(1, currentRangeDays) : metrics?.protein_avg_day, target: targets.protein_target_g, unit: "g" },
-          { label: "Carbs", actual: hasTotals ? totals.carbs / Math.max(1, currentRangeDays) : metrics?.carbs_avg_day, target: targets.carbs_target_g, unit: "g" },
-          { label: "Fat", actual: hasTotals ? totals.fat / Math.max(1, currentRangeDays) : metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g" },
+          { label: "Calories", actual: hasTotals ? totals.calories / Math.max(1, currentRangeDays) : metrics?.calories_avg_day, target: targets.calories_target, unit: "kcal", meta: { importance: 8, group: "nutrition", related: "calories" } },
+          { label: "Protein", actual: hasTotals ? totals.protein / Math.max(1, currentRangeDays) : metrics?.protein_avg_day, target: targets.protein_target_g, unit: "g", meta: { importance: 8, group: "nutrition", related: "protein" } },
+          { label: "Carbs", actual: hasTotals ? totals.carbs / Math.max(1, currentRangeDays) : metrics?.carbs_avg_day, target: targets.carbs_target_g, unit: "g", meta: { importance: 6, group: "nutrition", related: "carbs" } },
+          { label: "Fat", actual: hasTotals ? totals.fat / Math.max(1, currentRangeDays) : metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g", meta: { importance: 6, group: "nutrition", related: "fat" } },
         ];
 
         rows.forEach((row) => {
           const actualVal = row.actual;
           const targetVal = row.target;
           if (!targetVal || actualVal == null || Number.isNaN(actualVal)) {
-            posNutritionListEl.appendChild(renderStatusItem(row.label, "No data", "warn", "Needs logging"));
+            posNutritionListEl.appendChild(renderStatusItem(row.label, "No data", "warn", "Needs logging", row.meta));
             return;
           }
           posNutritionListEl.appendChild(
@@ -3312,6 +3379,7 @@
               actual: actualVal,
               target: targetVal,
               unit: row.unit,
+              meta: row.meta,
             }),
           );
         });
@@ -3329,6 +3397,7 @@
               proteinPct: (proteinCalories / total) * 100,
               carbsPct: (carbsCalories / total) * 100,
               fatPct: (fatCalories / total) * 100,
+              meta: { importance: 5, group: "nutrition", related: "macro_distribution" },
             });
             posNutritionListEl.appendChild(donut);
           }
@@ -3369,7 +3438,7 @@
           const tone = ratio > 0.75 ? "good" : ratio > 0.4 ? "warn" : "bad";
           const status = ratio > 0.75 ? "High power" : ratio > 0.4 ? "Moderate" : "Develop";
           const meta = row.max_watts ? `${formatNumber(row.max_watts, 0)} W (${formatNumber(percent, 0)}% of best)` : "No watts";
-          const item = renderStatusItem(name, status, tone, meta);
+          const item = renderStatusItem(name, status, tone, meta, { importance: 6, group: "strength_baseline", related: "max_watts,max_weight,one_rm" });
           item.appendChild(renderThresholdBar(percent));
           posBaselinesListEl.appendChild(item);
         });
@@ -3395,7 +3464,7 @@
         data.forEach((row) => {
           const label = row.session_date ? new Date(row.session_date).toLocaleDateString() : row.training_id;
           const band = qualityBand(row.quality_score);
-          const item = renderStatusItem(label, band.label, band.tone, `Quality ${formatScore(row.quality_score)}`);
+          const item = renderStatusItem(label, band.label, band.tone, `Quality ${formatScore(row.quality_score)}`, { importance: 7, group: "session_quality", related: "quality_score" });
           item.appendChild(renderThresholdBar(row.quality_score ?? 0));
           posQualityListEl.appendChild(item);
         });
@@ -3440,7 +3509,13 @@
         metricsData.forEach((row) => {
           const title = row.action_library_name || "Exercise";
           const band = qualityBand(row.quality_score);
-          const item = renderStatusItem(title, band.label, band.tone, `Quality ${formatScore(row.quality_score)}`);
+          const item = renderStatusItem(
+            title,
+            band.label,
+            band.tone,
+            `Quality ${formatScore(row.quality_score)}`,
+            { importance: 5, group: "session_detail", related: "quality,watts,reps" },
+          );
           item.appendChild(renderThresholdBar(row.quality_score ?? 0));
           posLastSessionListEl.appendChild(item);
         });
@@ -3652,7 +3727,13 @@
                 ${deltaLine ? `<div class="trend-stats">${deltaLine}</div>` : ""}
               </div>
             `;
-            const entry = renderStatusItem(item.name, band.label, band.tone, "Trend snapshot");
+            const entry = renderStatusItem(
+              item.name,
+              band.label,
+              band.tone,
+              "Trend snapshot",
+              { importance: 6, group: "exercise_trends", related: "quality,watts,speed,rom" },
+            );
             if (meta) {
               const metaWrap = document.createElement("div");
               metaWrap.className = "list-row";
@@ -3743,7 +3824,13 @@
               <div class="weakness-note">Fix: ${fixNote}</div>
             </div>
           `;
-          const entry = renderStatusItem(item.name, band.label, band.tone, "Focus area");
+          const entry = renderStatusItem(
+            item.name,
+            band.label,
+            band.tone,
+            "Focus area",
+            { importance: 8, group: "strength_fix", related: "asymmetry,quality,completion,tempo" },
+          );
           const metaWrap = document.createElement("div");
           metaWrap.className = "list-row";
           metaWrap.innerHTML = meta;
@@ -3772,21 +3859,30 @@
         const isToday = plan.date === dateKey;
         if (posPlanDateEl) posPlanDateEl.textContent = isToday ? "Today" : `Latest: ${plan.date}`;
         if (plan.summary_text) {
-          posPlanBodyEl.appendChild(renderPlanList("Summary", plan.summary_text));
+          posPlanBodyEl.appendChild(renderPlanList("Summary", plan.summary_text, { importance: 9, group: "plan", related: "summary" }));
         }
         const rec = plan.plan_json?.recommendation ?? {};
         if (rec?.type) {
-          posPlanBodyEl.appendChild(renderStatusItem("Type", rec.type, "good"));
+          posPlanBodyEl.appendChild(renderStatusItem("Type", rec.type, "good", "", { importance: 9, group: "plan", related: "type" }));
         }
         if (rec?.duration_min) {
           const band = durationBand(rec.duration_min);
-          posPlanBodyEl.appendChild(renderBarItem("Duration", band.label, band.tone, band.percent, `${rec.duration_min} min`));
+          posPlanBodyEl.appendChild(
+            renderBarItem(
+              "Duration",
+              band.label,
+              band.tone,
+              band.percent,
+              `${rec.duration_min} min`,
+              { importance: 9, group: "plan", related: "duration" },
+            ),
+          );
         }
         if (rec?.intensity) {
-          posPlanBodyEl.appendChild(renderStatusItem("Intensity", rec.intensity, "warn"));
+          posPlanBodyEl.appendChild(renderStatusItem("Intensity", rec.intensity, "warn", "", { importance: 8, group: "plan", related: "intensity" }));
         }
         if (rec?.reason) {
-          posPlanBodyEl.appendChild(renderPlanList("Why", rec.reason));
+          posPlanBodyEl.appendChild(renderPlanList("Why", rec.reason, { importance: 7, group: "plan", related: "reason" }));
         }
       }
 
