@@ -202,6 +202,43 @@
         display: grid;
         gap: 10px;
       }
+      .plan-stack {
+        display: grid;
+        gap: 12px;
+      }
+      .plan-segment {
+        border-radius: 14px;
+        border: 1px solid rgba(30, 41, 59, 0.6);
+        background: rgba(12, 17, 32, 0.7);
+        padding: 10px;
+      }
+      .plan-segment.good { border-left: 3px solid var(--success); }
+      .plan-segment.warn { border-left: 3px solid #f59e0b; }
+      .plan-segment.bad { border-left: 3px solid var(--danger); }
+      .plan-segment-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.6);
+      }
+      .plan-segment-title {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .plan-segment-meta {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .plan-segment-body {
+        margin-top: 8px;
+        font-size: 11px;
+        color: var(--muted);
+        display: grid;
+        gap: 4px;
+      }
       .timeline {
         position: relative;
         padding-left: 16px;
@@ -3970,6 +4007,21 @@
         return item;
       }
 
+      function renderPlanSegment({ title, meta = "", lines = [], tone = "good", metricMeta = null }) {
+        const segment = document.createElement("div");
+        segment.className = `plan-segment ${tone}`;
+        const bodyLines = lines.length ? lines.map((line) => `<div>${line}</div>`).join("") : "<div>No data</div>";
+        segment.innerHTML = `
+          <div class="plan-segment-header">
+            <div class="plan-segment-title">${title}</div>
+            <div class="plan-segment-meta">${meta}</div>
+          </div>
+          <div class="plan-segment-body">${bodyLines}</div>
+        `;
+        attachMeta(segment, metricMeta);
+        return segment;
+      }
+
       function renderStatList(title, value, meta, metricMeta = null) {
         const item = document.createElement("div");
         item.className = "list-item";
@@ -5365,17 +5417,18 @@
         const nutritionDaysCount = nutritionDays.size;
         const nutritionDaysDisplay = Math.min(nutritionDaysCount, 7);
 
-        const timeline = document.createElement("div");
-        timeline.className = "timeline";
+        const planStack = document.createElement("div");
+        planStack.className = "plan-stack";
 
         if (plan.summary_text) {
-          timeline.appendChild(
-            renderTimelineItem(
-              "Focus",
-              plan.summary_text,
-              "good",
-              { importance: 10, group: "plan", related: "summary" },
-            ),
+          planStack.appendChild(
+            renderPlanSegment({
+              title: "Focus",
+              meta: isToday ? "Today" : "Latest plan",
+              lines: [plan.summary_text],
+              tone: "good",
+              metricMeta: { importance: 10, group: "plan", related: "summary" },
+            }),
           );
         }
 
@@ -5384,13 +5437,14 @@
         if (rec?.duration_min) planPieces.push(`${rec.duration_min} min`);
         if (rec?.intensity) planPieces.push(`${rec.intensity} intensity`);
         if (planPieces.length) {
-          timeline.appendChild(
-            renderTimelineItem(
-              "Prescription",
-              planPieces.join(" · "),
-              "good",
-              { importance: 9, group: "plan", related: "type,duration,intensity" },
-            ),
+          planStack.appendChild(
+            renderPlanSegment({
+              title: "Prescription",
+              meta: rec?.intensity ? String(rec.intensity) : "Plan",
+              lines: [planPieces.join(" · ")],
+              tone: "good",
+              metricMeta: { importance: 9, group: "plan", related: "type,duration,intensity" },
+            }),
           );
         }
 
@@ -5401,23 +5455,25 @@
         if (strengthCount > 0) {
           doneParts.push(`${strengthCount} strength session${strengthCount === 1 ? "" : "s"}`);
         }
-        timeline.appendChild(
-          renderTimelineItem(
-            "Progress today",
-            doneParts.length ? doneParts.join(" · ") : "No training logged yet",
-            doneParts.length ? "good" : "warn",
-            { importance: 9, group: "plan", related: "completion" },
-          ),
+        planStack.appendChild(
+          renderPlanSegment({
+            title: "Progress today",
+            meta: doneParts.length ? "Logged" : "No logs yet",
+            lines: [doneParts.length ? doneParts.join(" · ") : "No training logged yet"],
+            tone: doneParts.length ? "good" : "warn",
+            metricMeta: { importance: 9, group: "plan", related: "completion" },
+          }),
         );
 
         if (rec?.reason) {
-          timeline.appendChild(
-            renderTimelineItem(
-              "Why",
-              rec.reason,
-              "warn",
-              { importance: 7, group: "plan", related: "reason" },
-            ),
+          planStack.appendChild(
+            renderPlanSegment({
+              title: "Why",
+              meta: "Drivers",
+              lines: [rec.reason],
+              tone: "warn",
+              metricMeta: { importance: 7, group: "plan", related: "reason" },
+            }),
           );
         }
 
@@ -5495,41 +5551,34 @@
 
         addGroup("Facial exercises", ["No tracking source"]);
 
-        const inputsMarkup = planInputs.map((group) => {
-          const lines = group.lines.length ? group.lines : ["No data"];
-          const items = lines.map((line) => `<li>${line}</li>`).join("");
-          return `
-            <div class="plan-input-group">
-              <div class="plan-input-title">${group.title}</div>
-              <ul class="plan-input-list">${items}</ul>
-            </div>
-          `;
-        }).join("");
-
-        timeline.appendChild(
-          renderTimelineItem(
-            "Inputs used",
-            `<div class="plan-inputs">${inputsMarkup}</div>`,
-            "warn",
-            { importance: 8, group: "plan", related: "inputs" },
-          ),
-        );
+        planInputs.forEach((group) => {
+          planStack.appendChild(
+            renderPlanSegment({
+              title: group.title,
+              meta: "Inputs",
+              lines: group.lines.length ? group.lines : ["No data"],
+              tone: "warn",
+              metricMeta: { importance: 8, group: "plan", related: "inputs" },
+            }),
+          );
+        });
 
         if (sleepDelta != null && sleepDelta <= -0.5) {
           const swapNote = rec?.duration_min
             ? `Sleep deficit (${formatNumber(Math.abs(sleepDelta), 1)}h) · Cut duration ~20%`
             : `Sleep deficit (${formatNumber(Math.abs(sleepDelta), 1)}h) · Keep intensity easy`;
-          timeline.appendChild(
-            renderTimelineItem(
-              "Sleep deficit adjustment",
-              swapNote,
-              "bad",
-              { importance: 8, group: "plan", related: "sleep" },
-            ),
+          planStack.appendChild(
+            renderPlanSegment({
+              title: "Sleep adjustment",
+              meta: "Risk control",
+              lines: [swapNote],
+              tone: "bad",
+              metricMeta: { importance: 8, group: "plan", related: "sleep" },
+            }),
           );
         }
 
-        posPlanBodyEl.appendChild(timeline);
+        posPlanBodyEl.appendChild(planStack);
 
         if (posPlanNoteEl) {
           const parts = [];
