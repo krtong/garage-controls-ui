@@ -4218,11 +4218,11 @@
 
       function bandFromScore(score) {
         if (score === null || score === undefined || Number.isNaN(score)) {
-          return { label: "Unknown", tone: "warn", percent: 40 };
+          return { tone: "warn", percent: 40 };
         }
-        if (score >= 70) return { label: "Green", tone: "good", percent: 85 };
-        if (score >= 50) return { label: "Yellow", tone: "warn", percent: 60 };
-        return { label: "Red", tone: "bad", percent: 25 };
+        if (score >= 70) return { tone: "good", percent: 85 };
+        if (score >= 50) return { tone: "warn", percent: 60 };
+        return { tone: "bad", percent: 25 };
       }
 
       function frequencyBand(count) {
