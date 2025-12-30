@@ -151,6 +151,36 @@
         display: grid;
         gap: 12px;
       }
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        color: var(--muted);
+        background: rgba(15, 23, 42, 0.6);
+      }
+      .chip.good {
+        border-color: rgba(52, 211, 153, 0.6);
+        color: #86efac;
+        background: rgba(52, 211, 153, 0.12);
+      }
+      .chip.warn {
+        border-color: rgba(248, 171, 111, 0.55);
+        color: #fdba74;
+        background: rgba(249, 115, 22, 0.15);
+      }
+      .chip.bad {
+        border-color: rgba(248, 113, 113, 0.55);
+        color: #fda4af;
+        background: rgba(244, 63, 94, 0.15);
+      }
       .pos-summary-header {
         display: flex;
         align-items: center;
@@ -170,6 +200,39 @@
         padding: 14px;
         display: grid;
         gap: 10px;
+      }
+      .timeline {
+        position: relative;
+        padding-left: 16px;
+        display: grid;
+        gap: 12px;
+        border-left: 1px solid rgba(148, 163, 184, 0.25);
+      }
+      .timeline-item {
+        position: relative;
+        display: grid;
+        gap: 4px;
+      }
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -9px;
+        top: 6px;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+      .timeline-item.good::before { background: var(--success); }
+      .timeline-item.warn::before { background: #f59e0b; }
+      .timeline-item.bad::before { background: var(--danger); }
+      .timeline-title {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .timeline-meta {
+        color: var(--muted);
+        font-size: 12px;
       }
       .pos-body {
         display: grid;
@@ -977,6 +1040,7 @@
               <div id="pos-summary" class="pos-summary hidden" data-importance="10" data-group="readiness" data-related="readiness,adherence,workouts,load">
                 <div id="pos-summary-metrics" class="kpi-grid"></div>
                 <div class="meta" id="pos-summary-note"></div>
+                <div id="pos-summary-drivers" class="chip-row"></div>
               </div>
               <div id="pos-plan" class="pos-plan-panel hidden" data-importance="10" data-group="action" data-related="recommendation,intensity,duration,reason">
                 <div class="row-inline">
@@ -1179,6 +1243,7 @@
       const posSummaryUpdatedEl = document.getElementById("pos-summary-updated");
       const posSummaryFreshnessEl = document.getElementById("pos-summary-freshness");
       const posSummaryNoteEl = document.getElementById("pos-summary-note");
+      const posSummaryDriversEl = document.getElementById("pos-summary-drivers");
       const posRangeEl = document.getElementById("pos-range");
       const posRecoveryEl = document.getElementById("pos-recovery");
       const posRecoveryListEl = document.getElementById("pos-recovery-list");
@@ -1616,7 +1681,13 @@
           .maybeSingle();
         const metricsReq = supabase
           .from("pos_day_metrics")
-          .select("adherence_7d,training_load_7d,updated_at")
+          .select("adherence_7d,training_load_7d,nutrition_entries_7d,sleep_seconds,sleep_baseline_7d,updated_at")
+          .order("date", { ascending: false })
+          .limit(1);
+        const stravaFormReq = supabase
+          .from("strava_fitness_daily")
+          .select("form")
+          .eq("sport_type", "all")
           .order("date", { ascending: false })
           .limit(1);
         const runReq = supabase
@@ -1629,10 +1700,12 @@
           { data: training, error: trainingError },
           { data: readiness },
           { data: metricsRows },
+          { data: formRows },
           { data: runData },
-        ] = await Promise.all([trainingReq, readinessReq, metricsReq, runReq]);
+        ] = await Promise.all([trainingReq, readinessReq, metricsReq, stravaFormReq, runReq]);
         const runRow = Array.isArray(runData) && runData.length ? runData[0] : null;
         const metrics = metricsRows?.[0] ?? null;
+        const latestForm = Array.isArray(formRows) && formRows.length ? Number(formRows[0].form ?? 0) : null;
 
         if (trainingError) {
           if (posSummaryNoteEl) posSummaryNoteEl.textContent = "Training summary unavailable.";
@@ -1691,10 +1764,11 @@
           posSummaryUpdatedEl.textContent = updatedAt ? `Updated ${formatTimestamp(updatedAt)}` : "—";
         }
 
+        const sleepAge = formatAgeDays(readiness?.sleep_updated_at);
+        const weightAge = formatAgeDays(readiness?.weight_updated_at);
+
         if (posSummaryNoteEl) {
           const notes = [];
-          const sleepAge = formatAgeDays(readiness?.sleep_updated_at);
-          const weightAge = formatAgeDays(readiness?.weight_updated_at);
           const sleepStale = staleLabel("Sleep", sleepAge, 2);
           const weightStale = staleLabel("Weight", weightAge, 7);
           if (readiness?.sleep_source === "none") {
@@ -1714,6 +1788,50 @@
             posSummaryFreshnessEl.classList.remove("unknown", "ontrack", "soon", "overdue");
             posSummaryFreshnessEl.classList.add(hasStale ? "overdue" : "ontrack");
           }
+        }
+
+        if (posSummaryDriversEl) {
+          posSummaryDriversEl.innerHTML = "";
+          const drivers = [];
+          const sleepSeconds = metrics?.sleep_seconds ?? null;
+          const sleepBaseline = metrics?.sleep_baseline_7d ?? null;
+          const sleepDelta = sleepSeconds != null && sleepBaseline != null
+            ? sleepSeconds / 3600 - sleepBaseline / 3600
+            : null;
+          if (sleepAge != null && sleepAge >= 2) {
+            drivers.push({ label: "Sleep stale", tone: "warn", meta: { importance: 9, group: "drivers", related: "sleep" } });
+          } else if (sleepDelta != null) {
+            drivers.push({
+              label: sleepDelta >= 0.5 ? "Sleep ↑" : sleepDelta <= -0.5 ? "Sleep ↓" : "Sleep steady",
+              tone: sleepDelta >= 0.5 ? "good" : sleepDelta <= -0.5 ? "bad" : "warn",
+              meta: { importance: 9, group: "drivers", related: "sleep" },
+            });
+          }
+          if (latestForm != null) {
+            drivers.push({
+              label: latestForm >= 5 ? "Form ↑" : latestForm <= -5 ? "Form ↓" : "Form steady",
+              tone: latestForm >= 5 ? "good" : latestForm <= -5 ? "bad" : "warn",
+              meta: { importance: 8, group: "drivers", related: "form" },
+            });
+          }
+          const nutritionEntries = metrics?.nutrition_entries_7d ?? 0;
+          if (nutritionEntries <= 0) {
+            drivers.push({ label: "Fuel missing", tone: "warn", meta: { importance: 7, group: "drivers", related: "nutrition" } });
+          } else if (nutritionEntries < 4) {
+            drivers.push({ label: "Fuel sparse", tone: "warn", meta: { importance: 7, group: "drivers", related: "nutrition" } });
+          } else {
+            drivers.push({ label: "Fuel tracked", tone: "good", meta: { importance: 7, group: "drivers", related: "nutrition" } });
+          }
+          if (weightAge != null && weightAge >= 7) {
+            drivers.push({ label: "Weight stale", tone: "warn", meta: { importance: 5, group: "drivers", related: "weight" } });
+          }
+          drivers.slice(0, 4).forEach((driver) => {
+            const chip = document.createElement("div");
+            chip.className = `chip ${driver.tone}`;
+            chip.textContent = driver.label;
+            attachMeta(chip, driver.meta);
+            posSummaryDriversEl.appendChild(chip);
+          });
         }
 
         if (posRunStatusEl) {
@@ -3168,6 +3286,17 @@
         return item;
       }
 
+      function renderTimelineItem(title, meta, tone = "good", metricMeta = null) {
+        const item = document.createElement("div");
+        item.className = `timeline-item ${tone}`;
+        item.innerHTML = `
+          <div class="timeline-title">${title}</div>
+          <div class="timeline-meta">${meta}</div>
+        `;
+        attachMeta(item, metricMeta);
+        return item;
+      }
+
       function renderStatList(title, value, meta, metricMeta = null) {
         const item = document.createElement("div");
         item.className = "list-item";
@@ -4404,12 +4533,34 @@
         posPlanBodyEl.innerHTML = "";
         if (posPlanNoteEl) posPlanNoteEl.textContent = "";
         const dateKey = localDateKey();
-        const { data, error } = await supabase
-          .from("coach_plan_daily")
-          .select("date,summary_text,plan_json,created_at")
-          .lte("date", dateKey)
-          .order("date", { ascending: false })
-          .limit(1);
+        const { startIso, endIso } = dayBounds(dateKey);
+
+        const [planResp, readinessResp, stravaResp, strengthResp] = await Promise.all([
+          supabase
+            .from("coach_plan_daily")
+            .select("date,summary_text,plan_json,created_at")
+            .lte("date", dateKey)
+            .order("date", { ascending: false })
+            .limit(1),
+          supabase
+            .from("readiness_state")
+            .select("readiness_score")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "strava")
+            .eq("event_type", "activity")
+            .gte("event_timestamp", startIso)
+            .lte("event_timestamp", endIso),
+          supabase
+            .from("speediance_training_session_scores")
+            .select("session_date")
+            .eq("session_date", dateKey),
+        ]);
+
+        const { data, error } = planResp;
         if (error || !data || !data.length) {
           if (posPlanNoteEl) posPlanNoteEl.textContent = "No plan available yet.";
           if (posPlanDateEl) posPlanDateEl.textContent = "—";
@@ -4418,31 +4569,97 @@
         const plan = data[0];
         const isToday = plan.date === dateKey;
         if (posPlanDateEl) posPlanDateEl.textContent = isToday ? "Today" : `Latest: ${plan.date}`;
-        if (plan.summary_text) {
-          posPlanBodyEl.appendChild(renderPlanList("Summary", plan.summary_text, { importance: 9, group: "plan", related: "summary" }));
-        }
         const rec = plan.plan_json?.recommendation ?? {};
-        if (rec?.type) {
-          posPlanBodyEl.appendChild(renderStatusItem("Type", rec.type, "good", "", { importance: 9, group: "plan", related: "type" }));
-        }
-        if (rec?.duration_min) {
-          const band = durationBand(rec.duration_min);
-          posPlanBodyEl.appendChild(
-            renderBarItem(
-              "Duration",
-              band.label,
-              band.tone,
-              band.percent,
-              `${rec.duration_min} min`,
-              { importance: 9, group: "plan", related: "duration" },
+        const readinessScore = readinessResp.data?.readiness_score ?? null;
+
+        let stravaMinutes = 0;
+        let stravaDistance = 0;
+        (stravaResp.data || []).forEach((row) => {
+          const payload = row.payload || {};
+          const duration = Number(payload.elapsed_s ?? payload.elapsed_time ?? payload.duration_s ?? 0);
+          const distance = Number(payload.distance_m ?? payload.distance ?? 0);
+          if (!Number.isNaN(duration)) stravaMinutes += duration / 60;
+          if (!Number.isNaN(distance)) stravaDistance += distance;
+        });
+        const strengthCount = strengthResp.data?.length ?? 0;
+
+        const timeline = document.createElement("div");
+        timeline.className = "timeline";
+
+        if (plan.summary_text) {
+          timeline.appendChild(
+            renderTimelineItem(
+              "Focus",
+              plan.summary_text,
+              "good",
+              { importance: 10, group: "plan", related: "summary" },
             ),
           );
         }
-        if (rec?.intensity) {
-          posPlanBodyEl.appendChild(renderStatusItem("Intensity", rec.intensity, "warn", "", { importance: 8, group: "plan", related: "intensity" }));
+
+        const planPieces = [];
+        if (rec?.type) planPieces.push(rec.type);
+        if (rec?.duration_min) planPieces.push(`${rec.duration_min} min`);
+        if (rec?.intensity) planPieces.push(`${rec.intensity} intensity`);
+        if (planPieces.length) {
+          timeline.appendChild(
+            renderTimelineItem(
+              "Prescription",
+              planPieces.join(" · "),
+              "good",
+              { importance: 9, group: "plan", related: "type,duration,intensity" },
+            ),
+          );
         }
+
+        const doneParts = [];
+        if (stravaMinutes > 0) {
+          doneParts.push(`${formatNumber(stravaMinutes, 0)} min endurance`);
+        }
+        if (strengthCount > 0) {
+          doneParts.push(`${strengthCount} strength session${strengthCount === 1 ? "" : "s"}`);
+        }
+        timeline.appendChild(
+          renderTimelineItem(
+            "Progress today",
+            doneParts.length ? doneParts.join(" · ") : "No training logged yet",
+            doneParts.length ? "good" : "warn",
+            { importance: 9, group: "plan", related: "completion" },
+          ),
+        );
+
         if (rec?.reason) {
-          posPlanBodyEl.appendChild(renderPlanList("Why", rec.reason, { importance: 7, group: "plan", related: "reason" }));
+          timeline.appendChild(
+            renderTimelineItem(
+              "Why",
+              rec.reason,
+              "warn",
+              { importance: 7, group: "plan", related: "reason" },
+            ),
+          );
+        }
+
+        if (readinessScore != null && readinessScore < 50) {
+          const swapNote = rec?.duration_min
+            ? `Cut duration ~20% · Keep easy`
+            : "Keep intensity easy and shorten if needed";
+          timeline.appendChild(
+            renderTimelineItem(
+              "Low readiness swap",
+              swapNote,
+              "bad",
+              { importance: 8, group: "plan", related: "readiness" },
+            ),
+          );
+        }
+
+        posPlanBodyEl.appendChild(timeline);
+
+        if (posPlanNoteEl) {
+          const parts = [];
+          if (stravaDistance > 0) parts.push(`${formatNumber(formatMiles(stravaDistance) ?? 0, 1)} mi so far`);
+          if (readinessScore != null) parts.push(`Readiness ${formatNumber(readinessScore, 0)}/100`);
+          posPlanNoteEl.textContent = parts.length ? parts.join(" · ") : "Plan ready";
         }
       }
 
