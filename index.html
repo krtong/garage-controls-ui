@@ -197,6 +197,14 @@
         display: grid;
         gap: 10px;
       }
+      .pos-day-drawer {
+        border-radius: 18px;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        background: rgba(12, 18, 34, 0.8);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+      }
       .pos-right-stack {
         display: grid;
         gap: 14px;
@@ -948,6 +956,13 @@
                 </div>
                 <div id="pos-heatmap-grid" class="heatmap"></div>
               </div>
+              <div id="pos-day-drawer" class="pos-day-drawer hidden" data-pos-view="overview training" data-importance="8" data-group="day_detail" data-related="sleep,training,nutrition,load">
+                <div class="row-inline">
+                  <div style="font-weight:600;">Day detail</div>
+                  <div class="meta" id="pos-day-drawer-date">—</div>
+                </div>
+                <div id="pos-day-drawer-list" class="list"></div>
+              </div>
               <div id="pos-strava-fitness" class="pos-section hidden" data-pos-view="overview training" data-importance="9" data-group="fitness" data-related="fitness,fatigue,form">
                 <div class="row-inline">
                   <div style="font-weight:600;">Fitness & freshness</div>
@@ -1118,6 +1133,9 @@
       const posHeatmapEl = document.getElementById("pos-heatmap");
       const posHeatmapGridEl = document.getElementById("pos-heatmap-grid");
       const posHeatmapNoteEl = document.getElementById("pos-heatmap-note");
+      const posDayDrawerEl = document.getElementById("pos-day-drawer");
+      const posDayDrawerListEl = document.getElementById("pos-day-drawer-list");
+      const posDayDrawerDateEl = document.getElementById("pos-day-drawer-date");
       const posStatsEl = document.getElementById("pos-stats");
       const posStatsListEl = document.getElementById("pos-stats-list");
       const posStatsRangeEl = document.getElementById("pos-stats-range");
@@ -1936,6 +1954,11 @@
         if (!posHeatmapGridEl || !posHeatmapEl) return;
         posHeatmapGridEl.innerHTML = "";
         if (posHeatmapNoteEl) posHeatmapNoteEl.textContent = "";
+        if (posDayDrawerEl) {
+          posDayDrawerEl.classList.add("hidden");
+          if (posDayDrawerListEl) posDayDrawerListEl.innerHTML = "";
+          if (posDayDrawerDateEl) posDayDrawerDateEl.textContent = "—";
+        }
 
         const daysCount = 7;
         const start = rangeStartDate(daysCount);
@@ -2068,6 +2091,9 @@
             <div class="heatmap-meta">${foodLabel}</div>
           `;
           cell.appendChild(dots);
+          cell.addEventListener("click", () => {
+            loadPosDayDrawer(key);
+          });
           rowEl.appendChild(cell);
         });
 
@@ -2215,6 +2241,124 @@
           if (sleepHours != null) noteParts.push(`${formatNumber(sleepHours, 1)} h last night`);
           if (baselineHours != null) noteParts.push(`baseline ${formatNumber(baselineHours, 1)} h`);
           posSleepPlanNoteEl.textContent = noteParts.length ? noteParts.join(" · ") : "Sleep plan ready";
+        }
+      }
+
+      async function loadPosDayDrawer(dateKey) {
+        if (!posDayDrawerEl || !posDayDrawerListEl) return;
+        posDayDrawerListEl.innerHTML = "";
+        posDayDrawerEl.classList.remove("hidden");
+        if (posDayDrawerDateEl) posDayDrawerDateEl.textContent = dateKey;
+
+        const { startIso, endIso } = dayBounds(dateKey);
+
+        const [metricsResp, stravaResp, nutritionResp, strengthResp] = await Promise.all([
+          supabase
+            .from("pos_day_metrics")
+            .select("sleep_seconds,training_load_today")
+            .eq("date", dateKey)
+            .maybeSingle(),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "strava")
+            .eq("event_type", "activity")
+            .gte("event_timestamp", startIso)
+            .lte("event_timestamp", endIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "nutrition")
+            .gte("event_timestamp", startIso)
+            .lte("event_timestamp", endIso),
+          supabase
+            .from("speediance_training_session_scores")
+            .select("session_date,quality_score,training_id")
+            .eq("session_date", dateKey),
+        ]);
+
+        const metrics = metricsResp.data ?? {};
+        if (metrics.sleep_seconds != null) {
+          posDayDrawerListEl.appendChild(
+            renderStatList(
+              "Sleep",
+              `${formatNumber(metrics.sleep_seconds / 3600, 1)} h`,
+              `Load ${formatNumber(metrics.training_load_today ?? 0, 0)}`,
+              { importance: 8, group: "day_detail", related: "sleep,load" },
+            ),
+          );
+        } else {
+          posDayDrawerListEl.appendChild(
+            renderStatusItem("Sleep", "Missing", "warn", "No sleep data", { importance: 6, group: "day_detail", related: "sleep" }),
+          );
+        }
+
+        let stravaMinutes = 0;
+        let stravaDistance = 0;
+        (stravaResp.data || []).forEach((row) => {
+          const payload = row.payload || {};
+          const duration = Number(payload.elapsed_s ?? payload.elapsed_time ?? payload.duration_s ?? 0);
+          const distance = Number(payload.distance_m ?? payload.distance ?? 0);
+          if (!Number.isNaN(duration)) stravaMinutes += duration / 60;
+          if (!Number.isNaN(distance)) stravaDistance += distance;
+        });
+        if (stravaMinutes > 0) {
+          posDayDrawerListEl.appendChild(
+            renderStatList(
+              "Endurance",
+              `${formatNumber(stravaMinutes, 0)} min`,
+              `${formatNumber(formatMiles(stravaDistance) ?? 0, 1)} mi`,
+              { importance: 7, group: "day_detail", related: "endurance" },
+            ),
+          );
+        } else {
+          posDayDrawerListEl.appendChild(
+            renderStatusItem("Endurance", "None", "warn", "No Strava activities", { importance: 5, group: "day_detail", related: "endurance" }),
+          );
+        }
+
+        const strengthCount = strengthResp.data?.length ?? 0;
+        if (strengthCount) {
+          const avgQuality = average((strengthResp.data || []).map((row) => row.quality_score).filter((v) => v != null));
+          const meta = avgQuality != null ? `Avg quality ${formatScore(avgQuality)}` : "Quality —";
+          posDayDrawerListEl.appendChild(
+            renderStatList(
+              "Strength",
+              `${strengthCount} session${strengthCount === 1 ? "" : "s"}`,
+              meta,
+              { importance: 7, group: "day_detail", related: "strength" },
+            ),
+          );
+        } else {
+          posDayDrawerListEl.appendChild(
+            renderStatusItem("Strength", "None", "warn", "No Speediance sessions", { importance: 5, group: "day_detail", related: "strength" }),
+          );
+        }
+
+        let calories = 0;
+        let protein = 0;
+        let carbs = 0;
+        let fat = 0;
+        (nutritionResp.data || []).forEach((row) => {
+          const payload = row.payload || {};
+          calories += Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? 0) || 0;
+          protein += Number(payload.protein_g ?? payload.protein ?? 0) || 0;
+          carbs += Number(payload.carbs_g ?? payload.carbs ?? 0) || 0;
+          fat += Number(payload.fat_g ?? payload.fat ?? 0) || 0;
+        });
+        if (nutritionResp.data?.length) {
+          posDayDrawerListEl.appendChild(
+            renderStatList(
+              "Nutrition",
+              `${formatNumber(calories, 0)} kcal`,
+              `P ${formatNumber(protein, 0)}g · C ${formatNumber(carbs, 0)}g · F ${formatNumber(fat, 0)}g`,
+              { importance: 7, group: "day_detail", related: "nutrition" },
+            ),
+          );
+        } else {
+          posDayDrawerListEl.appendChild(
+            renderStatusItem("Nutrition", "Missing", "warn", "No nutrition logs", { importance: 6, group: "day_detail", related: "nutrition" }),
+          );
         }
       }
 
@@ -3017,6 +3161,12 @@
       function daysSinceSunday(date) {
         const day = date.getDay();
         return Math.max(1, day);
+      }
+
+      function dayBounds(dateKey) {
+        const start = new Date(`${dateKey}T00:00:00`);
+        const end = new Date(`${dateKey}T23:59:59.999`);
+        return { startIso: start.toISOString(), endIso: end.toISOString() };
       }
 
       function formatNumber(value, decimals = 0) {
