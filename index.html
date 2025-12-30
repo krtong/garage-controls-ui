@@ -1083,7 +1083,7 @@
             <div class="pos-summary-meta">
               <div class="meta">Range</div>
               <div id="pos-range" class="segmented"></div>
-              <div id="pos-summary-freshness" class="pill unknown">Freshness</div>
+              <div id="pos-summary-freshness" class="pill unknown">Data status</div>
               <div id="pos-run-status" class="pill unknown">Last run</div>
             </div>
             <div class="pos-summary-meta">
@@ -1091,7 +1091,7 @@
               <div id="pos-nav" class="segmented"></div>
             </div>
             <div class="pos-hero-grid">
-              <div id="pos-summary" class="pos-summary hidden" data-importance="10" data-group="readiness" data-related="readiness,adherence,workouts,load">
+              <div id="pos-summary" class="pos-summary hidden" data-importance="10" data-group="summary" data-related="sleep,adherence,workouts,load,race">
                 <div id="pos-summary-metrics" class="kpi-grid"></div>
                 <div class="meta" id="pos-summary-note"></div>
                 <div id="pos-summary-drivers" class="chip-row"></div>
@@ -1222,7 +1222,7 @@
 
           <div class="pos-body" data-pos-view="race">
             <div class="pos-left">
-              <div id="pos-race-summary" class="pos-section hidden" data-pos-view="race" data-importance="10" data-group="race_readiness" data-related="readiness,swim,bike,run,confidence">
+              <div id="pos-race-summary" class="pos-section hidden" data-pos-view="race" data-importance="10" data-group="race_readiness" data-related="sleep,swim,bike,run,confidence">
                 <div class="row-inline">
                   <div style="font-weight:600;">Escape from Alcatraz 2026</div>
                   <div class="meta" id="pos-race-countdown">—</div>
@@ -1805,7 +1805,7 @@
           .maybeSingle();
         const readinessReq = supabase
           .from("readiness_state")
-          .select("readiness_score,updated_at,sleep_source,weight_source,sleep_updated_at,weight_updated_at")
+          .select("updated_at,sleep_source,weight_source,sleep_updated_at,weight_updated_at")
           .eq("id", "global")
           .maybeSingle();
         const metricsReq = supabase
@@ -1847,19 +1847,30 @@
           if (key) nutritionDays.add(key);
         });
         const nutritionDaysCount = nutritionDays.size;
+        const nutritionDaysDisplay = Math.min(nutritionDaysCount, 7);
 
         if (trainingError) {
           if (posSummaryNoteEl) posSummaryNoteEl.textContent = "Training summary unavailable.";
           return;
         }
 
-        const readinessScore = readiness?.readiness_score ?? null;
-        const readinessBand = bandFromScore(readinessScore);
         const adherence = metrics?.adherence_7d ?? 0;
         const adherenceTone = adherence >= 0.75 ? "good" : adherence >= 0.4 ? "warn" : "bad";
 
         const sleepAge = formatAgeDays(readiness?.sleep_updated_at);
         const weightAge = formatAgeDays(readiness?.weight_updated_at);
+        const raceStart = new Date("2026-06-06T00:00:00");
+        const daysToRace = Math.max(0, Math.ceil((raceStart - new Date()) / (1000 * 60 * 60 * 24)));
+        const sleepHours = metrics?.sleep_seconds ? metrics.sleep_seconds / 3600 : null;
+        const sleepBaseline = metrics?.sleep_baseline_7d ? metrics.sleep_baseline_7d / 3600 : null;
+        const sleepDelta = sleepHours != null && sleepBaseline != null ? sleepHours - sleepBaseline : null;
+        const sleepTone = sleepHours != null && sleepBaseline != null
+          ? sleepHours >= sleepBaseline * 0.9
+            ? "good"
+            : sleepHours >= sleepBaseline * 0.7
+              ? "warn"
+              : "bad"
+          : "warn";
         let confidence = 100;
         if (sleepAge == null || sleepAge >= 2) confidence -= 25;
         if (weightAge == null || weightAge >= 7) confidence -= 15;
@@ -1879,13 +1890,25 @@
 
         posSummaryMetricsEl.appendChild(
           renderKpiCard({
-            label: "Readiness score",
-            value: readinessScore != null ? `${formatNumber(readinessScore, 0)}/100` : "—",
-            tone: readinessBand.tone,
-            icon: "⚡️",
-            sub: readinessScore != null ? `${confidenceLabel} · ${confidence}%` : "Score missing",
-            progress: readiness?.readiness_score,
-            meta: { importance: 10, group: "readiness", related: "sleep,form,fatigue" },
+            label: "Days to race",
+            value: `${daysToRace}`,
+            tone: "good",
+            icon: "🏁",
+            sub: "Escape from Alcatraz 2026",
+            meta: { importance: 10, group: "race", related: "countdown" },
+          }),
+        );
+        posSummaryMetricsEl.appendChild(
+          renderKpiCard({
+            label: "Sleep last night",
+            value: sleepHours != null ? `${formatNumber(sleepHours, 1)}h` : "—",
+            tone: sleepTone,
+            icon: "🛌",
+            sub: sleepBaseline != null
+              ? `Baseline ${formatNumber(sleepBaseline, 1)}h · Δ ${formatNumber(sleepDelta ?? 0, 1)}h`
+              : "Baseline missing",
+            progress: sleepBaseline ? Math.min(100, (sleepHours ?? 0) / sleepBaseline * 100) : null,
+            meta: { importance: 10, group: "sleep", related: "duration,baseline,delta" },
           }),
         );
         posSummaryMetricsEl.appendChild(
@@ -1939,10 +1962,10 @@
           } else if (weightStale) {
             notes.push(weightStale);
           }
-          posSummaryNoteEl.textContent = notes.length ? notes.join(" · ") : "Freshness on track";
+          posSummaryNoteEl.textContent = notes.length ? notes.join(" · ") : "Sources fresh";
           if (posSummaryFreshnessEl) {
             const hasStale = notes.length > 0;
-            posSummaryFreshnessEl.textContent = hasStale ? "Needs attention" : "Fresh";
+            posSummaryFreshnessEl.textContent = hasStale ? "Needs attention" : "Up to date";
             posSummaryFreshnessEl.classList.remove("unknown", "ontrack", "soon", "overdue");
             posSummaryFreshnessEl.classList.add(hasStale ? "overdue" : "ontrack");
           }
@@ -1977,12 +2000,13 @@
             });
           }
           if (latestForm != null) {
+            const formLabel = latestForm >= 5
+              ? `Form +${formatNumber(latestForm, 0)}`
+              : latestForm <= -5
+                ? `Form ${formatNumber(latestForm, 0)}`
+                : `Form ${latestForm >= 0 ? "+" : ""}${formatNumber(latestForm, 0)}`;
             drivers.push({
-              label: latestForm >= 5
-                ? `Form +${formatNumber(latestForm, 0)}`
-                : latestForm <= -5
-                  ? `Form ${formatNumber(latestForm, 0)}`
-                  : `Form ${latestForm >= 0 ? "+" : ""}${formatNumber(latestForm, 0)}`,
+              label: `${formLabel} (Strava)`,
               tone: latestForm >= 5 ? "good" : latestForm <= -5 ? "bad" : "warn",
               meta: { importance: 8, group: "drivers", related: "form" },
             });
@@ -1991,13 +2015,13 @@
             drivers.push({ label: "Fuel missing", tone: "warn", meta: { importance: 7, group: "drivers", related: "nutrition" } });
           } else if (nutritionDaysCount < 4) {
             drivers.push({
-              label: `Fuel sparse (${nutritionDaysCount}/7 days)`,
+              label: `Fuel sparse (${nutritionDaysDisplay}/7 days)`,
               tone: "warn",
               meta: { importance: 7, group: "drivers", related: "nutrition" },
             });
           } else {
             drivers.push({
-              label: `Fuel tracked (${nutritionDaysCount}/7 days)`,
+              label: `Fuel tracked (${nutritionDaysDisplay}/7 days)`,
               tone: "good",
               meta: { importance: 7, group: "drivers", related: "nutrition" },
             });
@@ -2224,7 +2248,7 @@
             "Nutrition",
             nutritionStatus,
             nutritionTone,
-            `${nutritionDaysCount}/7 days logged`,
+            `${nutritionDaysDisplay}/7 days logged`,
             { importance: 8, group: "data_health", related: "nutrition" },
           ),
         );
@@ -2295,7 +2319,7 @@
         const [readinessResp, trainingResp, metricsResp] = await Promise.all([
           supabase
             .from("readiness_state")
-            .select("readiness_score,sleep_updated_at,weight_updated_at")
+            .select("sleep_updated_at,weight_updated_at")
             .eq("id", "global")
             .maybeSingle(),
           supabase
@@ -2305,7 +2329,7 @@
             .maybeSingle(),
           supabase
             .from("pos_day_metrics")
-            .select("adherence_7d,training_load_7d")
+            .select("adherence_7d,training_load_7d,sleep_seconds,sleep_baseline_7d")
             .order("date", { ascending: false })
             .limit(1),
         ]);
@@ -2314,7 +2338,11 @@
         const training = trainingResp.data ?? {};
         const metrics = metricsResp.data?.[0] ?? {};
 
-        const readinessScore = readiness.readiness_score ?? null;
+        const sleepHours = metrics.sleep_seconds ? metrics.sleep_seconds / 3600 : null;
+        const sleepBaseline = metrics.sleep_baseline_7d ? metrics.sleep_baseline_7d / 3600 : null;
+        const recoveryScore = sleepHours != null && sleepBaseline
+          ? Math.max(0, Math.min(100, (sleepHours / sleepBaseline) * 100))
+          : null;
         const enduranceCount = training.endurance_sessions_7d ?? 0;
         const strengthCount = training.strength_sessions_7d ?? 0;
         const distanceMiles = formatMiles(training.total_distance_m_7d ?? 0) ?? 0;
@@ -2354,10 +2382,12 @@
           },
           {
             label: "Recovery",
-            score: readinessScore,
-            tone: readinessScore >= 70 ? "good" : readinessScore >= 50 ? "warn" : "bad",
-            detail: readinessScore != null ? `Readiness ${formatNumber(readinessScore, 0)}/100` : "Readiness missing",
-            meta: { importance: 8, group: "race_pillar", related: "sleep,readiness" },
+            score: recoveryScore,
+            tone: recoveryScore >= 85 ? "good" : recoveryScore >= 70 ? "warn" : "bad",
+            detail: sleepHours != null && sleepBaseline != null
+              ? `Sleep ${formatNumber(sleepHours, 1)}h vs ${formatNumber(sleepBaseline, 1)}h baseline`
+              : "Sleep baseline missing",
+            meta: { importance: 8, group: "race_pillar", related: "sleep" },
           },
           {
             label: "Execution",
@@ -3330,7 +3360,7 @@
         } else if (sleepHours != null) {
           posSleepPlanListEl.appendChild(renderPlanList("Consistency", "Keep bedtime steady and protect 30 min wind-down", { importance: 6, group: "sleep_plan", related: "consistency" }));
         } else {
-          posSleepPlanListEl.appendChild(renderPlanList("Next step", "Log sleep to unlock readiness guidance.", { importance: 5, group: "sleep_plan", related: "logging" }));
+          posSleepPlanListEl.appendChild(renderPlanList("Next step", "Log sleep to unlock recovery guidance.", { importance: 5, group: "sleep_plan", related: "logging" }));
         }
 
         if (posSleepPlanNoteEl) {
@@ -4001,7 +4031,7 @@
         const status = ratio >= 1.1 ? "High" : ratio >= 0.9 ? "On target" : ratio >= 0.6 ? "Low" : "Very low";
         const tone = ratio >= 0.9 && ratio <= 1.1 ? "good" : ratio >= 0.6 ? "warn" : "bad";
         const decimals = unit === "kcal" ? 0 : 1;
-        const metaText = `Avg ${formatNumber(safeActual, decimals)} ${unit} · Target ${formatNumber(safeTarget, 0)} ${unit} (${Number.isFinite(percent) ? percent : 0}%)`;
+        const metaText = `Avg (logged days) ${formatNumber(safeActual, decimals)} ${unit} · Target ${formatNumber(safeTarget, 0)} ${unit} (${Number.isFinite(percent) ? percent : 0}%)`;
         const coverageText = coverage ? ` · ${coverage}` : "";
 
         const item = document.createElement("div");
@@ -4034,7 +4064,7 @@
         scale.innerHTML = `
           <span>0</span>
           <span>Target ${formatNumber(safeTarget, 0)} ${unit}</span>
-          <span>Cap ${formatNumber(scaleMax, 0)} ${unit}</span>
+          <span>120% cap ${formatNumber(scaleMax, 0)} ${unit}</span>
         `;
         item.appendChild(scale);
         attachMeta(item, meta);
@@ -4668,6 +4698,7 @@
           hasTotals = totals.calories + totals.protein + totals.carbs + totals.fat > 0;
         }
         const nutritionDaysCount = nutritionDays.size;
+        const nutritionDaysDisplay = Math.min(nutritionDaysCount, 7);
         const avgDivisor = nutritionDaysCount > 0 ? nutritionDaysCount : Math.max(1, currentRangeDays);
 
         if (!metrics && !targets) {
@@ -4678,7 +4709,7 @@
         if (posNutritionNoteEl) {
           const entries = nutritionResp.data?.length ?? 0;
           const noteParts = [];
-          noteParts.push(entries ? `${entries} logs · ${nutritionDaysCount}/7 days` : "No logs yet.");
+          noteParts.push(entries ? `${entries} logs · ${nutritionDaysDisplay}/7 days` : "No logs yet.");
           if (!targets?.calories_target) {
             noteParts.push("Targets missing");
           } else {
@@ -4707,7 +4738,7 @@
                 row.label,
                 `${formatNumber(actualVal, row.unit === "kcal" ? 0 : 1)} ${row.unit}`,
                 "warn",
-                `Target missing · ${nutritionDaysCount}/7 days logged`,
+                `Target missing · ${nutritionDaysDisplay}/7 days logged`,
                 row.meta,
               ),
             );
@@ -4719,7 +4750,7 @@
               actual: actualVal,
               target: targetVal,
               unit: row.unit,
-              coverage: `${nutritionDaysCount}/7 days logged`,
+              coverage: `${nutritionDaysDisplay}/7 days logged`,
               meta: row.meta,
             }),
           );
@@ -5187,7 +5218,7 @@
         const dateKey = localDateKey();
         const { startIso, endIso } = dayBounds(dateKey);
 
-        const [planResp, readinessResp, stravaResp, strengthResp] = await Promise.all([
+        const [planResp, metricsResp, stravaResp, strengthResp] = await Promise.all([
           supabase
             .from("coach_plan_daily")
             .select("date,summary_text,plan_json,created_at")
@@ -5195,10 +5226,10 @@
             .order("date", { ascending: false })
             .limit(1),
           supabase
-            .from("readiness_state")
-            .select("readiness_score")
-            .eq("id", "global")
-            .maybeSingle(),
+            .from("pos_day_metrics")
+            .select("sleep_seconds,sleep_baseline_7d")
+            .order("date", { ascending: false })
+            .limit(1),
           supabase
             .from("pos_events")
             .select("event_timestamp,payload")
@@ -5222,7 +5253,10 @@
         const isToday = plan.date === dateKey;
         if (posPlanDateEl) posPlanDateEl.textContent = isToday ? "Today" : `Latest: ${plan.date}`;
         const rec = plan.plan_json?.recommendation ?? {};
-        const readinessScore = readinessResp.data?.readiness_score ?? null;
+        const metrics = metricsResp.data?.[0] ?? {};
+        const sleepHours = metrics.sleep_seconds ? metrics.sleep_seconds / 3600 : null;
+        const sleepBaseline = metrics.sleep_baseline_7d ? metrics.sleep_baseline_7d / 3600 : null;
+        const sleepDelta = sleepHours != null && sleepBaseline != null ? sleepHours - sleepBaseline : null;
 
         let stravaMinutes = 0;
         let stravaDistance = 0;
@@ -5291,16 +5325,16 @@
           );
         }
 
-        if (readinessScore != null && readinessScore < 50) {
+        if (sleepDelta != null && sleepDelta <= -0.5) {
           const swapNote = rec?.duration_min
-            ? `Cut duration ~20% · Keep easy`
-            : "Keep intensity easy and shorten if needed";
+            ? `Sleep deficit (${formatNumber(Math.abs(sleepDelta), 1)}h) · Cut duration ~20%`
+            : `Sleep deficit (${formatNumber(Math.abs(sleepDelta), 1)}h) · Keep intensity easy`;
           timeline.appendChild(
             renderTimelineItem(
-              "Low readiness swap",
+              "Sleep deficit adjustment",
               swapNote,
               "bad",
-              { importance: 8, group: "plan", related: "readiness" },
+              { importance: 8, group: "plan", related: "sleep" },
             ),
           );
         }
@@ -5310,7 +5344,9 @@
         if (posPlanNoteEl) {
           const parts = [];
           if (stravaDistance > 0) parts.push(`${formatNumber(formatMiles(stravaDistance) ?? 0, 1)} mi so far`);
-          if (readinessScore != null) parts.push(`Readiness ${formatNumber(readinessScore, 0)}/100`);
+          if (sleepDelta != null) {
+            parts.push(`Sleep Δ ${sleepDelta >= 0 ? "+" : ""}${formatNumber(sleepDelta, 1)}h`);
+          }
           posPlanNoteEl.textContent = parts.length ? parts.join(" · ") : "Plan ready";
         }
       }
