@@ -232,6 +232,48 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
+      .matrix {
+        display: grid;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .matrix-row {
+        display: grid;
+        grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        align-items: center;
+      }
+      .matrix-header {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .matrix-name {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .matrix-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(30, 41, 59, 0.7);
+        position: relative;
+        overflow: hidden;
+      }
+      .matrix-bar > span {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        border-radius: inherit;
+        background: rgba(56, 189, 248, 0.8);
+      }
+      .matrix-value {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
       .row-inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .process-tabs {
         display: flex;
@@ -971,6 +1013,15 @@
                 <div id="pos-strava-list" class="list"></div>
                 <div id="pos-strava-chart" class="chart"></div>
               </div>
+              <div id="pos-relations" class="pos-section hidden" data-pos-view="overview training nutrition sleep" data-importance="8" data-group="relationships" data-related="load,sleep,nutrition,strength_quality">
+                <div class="row-inline">
+                  <div style="font-weight:600;">Signals in context</div>
+                  <div class="meta" id="pos-relations-note">—</div>
+                </div>
+                <div id="pos-relations-list" class="list"></div>
+                <div id="pos-load-sleep-chart" class="chart"></div>
+                <div id="pos-fuel-load-chart" class="chart"></div>
+              </div>
               <div id="pos-trends" class="pos-section hidden" data-pos-view="overview training" data-importance="7" data-group="momentum" data-related="training_load,endurance_distance,strength_sessions">
                 <div class="row-inline">
                   <div style="font-weight:600;">Momentum strips</div>
@@ -1010,6 +1061,14 @@
                   <div id="pos-stats-list" class="list"></div>
                   <div class="meta" id="pos-stats-note"></div>
                 </div>
+                <div id="pos-sleep-trend" class="pos-panel hidden" data-pos-view="overview sleep" data-importance="8" data-group="sleep_trend" data-related="sleep,consistency,debt">
+                  <div class="row-inline">
+                    <div style="font-weight:600;">Sleep trend</div>
+                    <div class="meta" id="pos-sleep-trend-note">—</div>
+                  </div>
+                  <div id="pos-sleep-trend-chart" class="chart"></div>
+                  <div id="pos-sleep-trend-list" class="list"></div>
+                </div>
                 <div id="pos-sleep-plan" class="pos-panel hidden" data-pos-view="overview sleep" data-importance="7" data-group="sleep_plan" data-related="sleep,baseline,targets">
                   <div class="row-inline">
                     <div style="font-weight:600;">Sleep plan</div>
@@ -1043,6 +1102,13 @@
               </div>
             </div>
             <div class="pos-lab-grid">
+              <div id="pos-strength-matrix" class="pos-panel hidden" data-pos-view="strength" data-importance="8" data-group="strength_matrix" data-related="quality,asymmetry,completion,power">
+                <div class="row-inline">
+                  <div style="font-weight:600;">Strength matrix</div>
+                  <div class="meta" id="pos-strength-matrix-note">—</div>
+                </div>
+                <div id="pos-strength-matrix-table" class="matrix"></div>
+              </div>
               <div id="pos-quality" class="pos-panel hidden" data-pos-view="strength" data-importance="7" data-group="session_quality" data-related="quality_score,completion,rep_consistency">
                 <div class="row-inline">
                   <div style="font-weight:600;">Session quality</div>
@@ -1121,6 +1187,11 @@
       const posStravaListEl = document.getElementById("pos-strava-list");
       const posStravaNoteEl = document.getElementById("pos-strava-note");
       const posStravaChartEl = document.getElementById("pos-strava-chart");
+      const posRelationsEl = document.getElementById("pos-relations");
+      const posRelationsListEl = document.getElementById("pos-relations-list");
+      const posRelationsNoteEl = document.getElementById("pos-relations-note");
+      const posLoadSleepChartEl = document.getElementById("pos-load-sleep-chart");
+      const posFuelLoadChartEl = document.getElementById("pos-fuel-load-chart");
       const posPlanEl = document.getElementById("pos-plan");
       const posPlanBodyEl = document.getElementById("pos-plan-body");
       const posPlanDateEl = document.getElementById("pos-plan-date");
@@ -1140,6 +1211,10 @@
       const posStatsListEl = document.getElementById("pos-stats-list");
       const posStatsRangeEl = document.getElementById("pos-stats-range");
       const posStatsNoteEl = document.getElementById("pos-stats-note");
+      const posSleepTrendEl = document.getElementById("pos-sleep-trend");
+      const posSleepTrendChartEl = document.getElementById("pos-sleep-trend-chart");
+      const posSleepTrendListEl = document.getElementById("pos-sleep-trend-list");
+      const posSleepTrendNoteEl = document.getElementById("pos-sleep-trend-note");
       const posAppleHealthEl = document.getElementById("pos-apple-health");
       const posAppleHealthListEl = document.getElementById("pos-apple-health-list");
       const posAppleHealthNoteEl = document.getElementById("pos-apple-health-note");
@@ -1158,6 +1233,9 @@
       const posStrengthScatterEl = document.getElementById("pos-strength-scatter");
       const posStrengthScatterChartEl = document.getElementById("pos-strength-scatter-chart");
       const posStrengthScatterNoteEl = document.getElementById("pos-strength-scatter-note");
+      const posStrengthMatrixEl = document.getElementById("pos-strength-matrix");
+      const posStrengthMatrixTableEl = document.getElementById("pos-strength-matrix-table");
+      const posStrengthMatrixNoteEl = document.getElementById("pos-strength-matrix-note");
       const posQualityTrendsEl = document.getElementById("pos-quality-trends");
       const posQualityTrendsListEl = document.getElementById("pos-quality-trends-list");
       const posQualityTrendsNoteEl = document.getElementById("pos-quality-trends-note");
@@ -1760,7 +1838,15 @@
           .order("date", { ascending: true });
 
         if (error || !data || !data.length) {
-          posStravaListEl.appendChild(renderStatusItem("Strava fitness", "No data", "warn", "Sync Strava fitness to populate."));
+          posStravaListEl.appendChild(
+            renderStatusItem(
+              "Strava fitness",
+              "No data",
+              "warn",
+              "Sync Strava fitness to populate.",
+              { importance: 8, group: "fitness", related: "fitness,fatigue,form" },
+            ),
+          );
           return;
         }
 
@@ -2100,6 +2186,317 @@
         posHeatmapGridEl.appendChild(rowEl);
         if (posHeatmapNoteEl) {
           posHeatmapNoteEl.textContent = "Last 7 days · dots show sleep, food, training coverage.";
+        }
+      }
+
+      async function loadPosRelations() {
+        if (!posRelationsEl) return;
+        if (posRelationsListEl) posRelationsListEl.innerHTML = "";
+        if (posRelationsNoteEl) posRelationsNoteEl.textContent = "";
+        if (posLoadSleepChartEl) posLoadSleepChartEl.innerHTML = "";
+        if (posFuelLoadChartEl) posFuelLoadChartEl.innerHTML = "";
+
+        const dayCount = Math.max(1, currentRangeDays);
+        const start = rangeStartDate(dayCount);
+        const startIso = start.toISOString();
+        const startKey = startIso.slice(0, 10);
+        const days = [];
+        for (let i = 0; i < dayCount; i += 1) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          days.push(dateKeyFromIso(d.toISOString()));
+        }
+
+        const [metricsResp, nutritionResp] = await Promise.all([
+          supabase
+            .from("pos_day_metrics")
+            .select("date,training_load_today,sleep_seconds")
+            .gte("date", startKey)
+            .order("date", { ascending: true }),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "nutrition")
+            .gte("event_timestamp", startIso),
+        ]);
+
+        const loadByDay = new Map();
+        const sleepByDay = new Map();
+        (metricsResp.data || []).forEach((row) => {
+          if (!row.date) return;
+          loadByDay.set(row.date, Number(row.training_load_today ?? 0));
+          if (row.sleep_seconds != null) {
+            sleepByDay.set(row.date, row.sleep_seconds / 3600);
+          }
+        });
+
+        const caloriesByDay = new Map();
+        const proteinByDay = new Map();
+        (nutritionResp.data || []).forEach((row) => {
+          const key = dateKeyFromIso(row.event_timestamp);
+          if (!key) return;
+          const payload = row.payload || {};
+          const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? 0);
+          const protein = Number(payload.protein_g ?? payload.protein ?? 0);
+          if (!Number.isNaN(calories)) caloriesByDay.set(key, (caloriesByDay.get(key) || 0) + calories);
+          if (!Number.isNaN(protein)) proteinByDay.set(key, (proteinByDay.get(key) || 0) + protein);
+        });
+
+        const loadSeries = days.map((d) => loadByDay.get(d) || 0);
+        const sleepSeries = days.map((d) => sleepByDay.get(d) || 0);
+        const caloriesSeries = days.map((d) => caloriesByDay.get(d) || 0);
+        const proteinSeries = days.map((d) => proteinByDay.get(d) || 0);
+
+        const loadAvg = avg(loadSeries) ?? 0;
+        const sleepAvg = avg(sleepSeries) ?? 0;
+        const caloriesAvg = avg(caloriesSeries) ?? 0;
+        const proteinAvg = avg(proteinSeries) ?? 0;
+
+        if (posRelationsListEl) {
+          posRelationsListEl.appendChild(
+            renderStatusItem(
+              "Load vs sleep",
+              sleepAvg ? "Tracked" : "Sparse",
+              sleepAvg ? "good" : "warn",
+              `Load avg ${formatNumber(loadAvg, 0)} · Sleep avg ${formatNumber(sleepAvg, 1)} h`,
+              { importance: 8, group: "relationships", related: "load,sleep" },
+            ),
+          );
+          posRelationsListEl.appendChild(
+            renderStatusItem(
+              "Fuel vs load",
+              caloriesAvg ? "Tracked" : "Sparse",
+              caloriesAvg ? "good" : "warn",
+              `Calories avg ${formatNumber(caloriesAvg, 0)} · Protein avg ${formatNumber(proteinAvg, 0)} g`,
+              { importance: 7, group: "relationships", related: "calories,protein,load" },
+            ),
+          );
+        }
+
+        if (posLoadSleepChartEl) {
+          const labels = days;
+          const loadChart = renderLineChart({
+            labels,
+            series: [{ label: "Load", color: "#38bdf8", values: loadSeries }],
+            yLabel: "Load",
+          });
+          const sleepChart = renderLineChart({
+            labels,
+            series: [{ label: "Sleep (h)", color: "#22c55e", values: sleepSeries }],
+            yLabel: "Hours",
+          });
+          posLoadSleepChartEl.innerHTML = `${loadChart}${sleepChart}`;
+        }
+
+        if (posFuelLoadChartEl) {
+          const labels = days;
+          const caloriesChart = renderLineChart({
+            labels,
+            series: [{ label: "Calories", color: "#f59e0b", values: caloriesSeries }],
+            yLabel: "kcal",
+          });
+          const proteinChart = renderLineChart({
+            labels,
+            series: [{ label: "Protein", color: "#38bdf8", values: proteinSeries }],
+            yLabel: "g",
+          });
+          posFuelLoadChartEl.innerHTML = `${caloriesChart}${proteinChart}`;
+        }
+
+        if (posRelationsNoteEl) {
+          posRelationsNoteEl.textContent = `${rangeLabel(currentRangeDays)} · relationships between load, sleep, fuel.`;
+        }
+      }
+
+      async function loadPosSleepTrend() {
+        if (!posSleepTrendEl || !posSleepTrendChartEl || !posSleepTrendListEl) return;
+        posSleepTrendChartEl.innerHTML = "";
+        posSleepTrendListEl.innerHTML = "";
+        if (posSleepTrendNoteEl) posSleepTrendNoteEl.textContent = "";
+
+        const dayCount = Math.max(7, Math.min(30, currentRangeDays));
+        const start = rangeStartDate(dayCount);
+        const startKey = start.toISOString().slice(0, 10);
+        const days = [];
+        for (let i = 0; i < dayCount; i += 1) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          days.push(dateKeyFromIso(d.toISOString()));
+        }
+
+        const { data, error } = await supabase
+          .from("pos_day_metrics")
+          .select("date,sleep_seconds,sleep_baseline_7d")
+          .gte("date", startKey)
+          .order("date", { ascending: true });
+
+        if (error || !data || !data.length) {
+          if (posSleepTrendNoteEl) posSleepTrendNoteEl.textContent = "No sleep trend yet.";
+          return;
+        }
+
+        const sleepByDay = new Map();
+        let baseline = null;
+        data.forEach((row) => {
+          if (!row.date) return;
+          if (row.sleep_seconds != null) {
+            sleepByDay.set(row.date, row.sleep_seconds / 3600);
+          }
+          if (row.sleep_baseline_7d != null) {
+            baseline = row.sleep_baseline_7d / 3600;
+          }
+        });
+
+        const series = days.map((d) => sleepByDay.get(d) || 0);
+        const avgSleep = avg(series) ?? 0;
+        const sleepStd = stddev(series) ?? 0;
+        const target = baseline || 7;
+        const totalSleep = series.reduce((acc, val) => acc + val, 0);
+        const debt = Math.max(0, target * dayCount - totalSleep);
+
+        posSleepTrendChartEl.innerHTML = renderLineChart({
+          labels: days,
+          series: [{ label: "Sleep (h)", color: "#38bdf8", values: series }],
+          yLabel: "Hours",
+        });
+
+        posSleepTrendListEl.appendChild(
+          renderStatusItem(
+            "Average",
+            `${formatNumber(avgSleep, 1)} h`,
+            avgSleep >= target * 0.9 ? "good" : "warn",
+            `Target ${formatNumber(target, 1)} h`,
+            { importance: 8, group: "sleep_trend", related: "average,target" },
+          ),
+        );
+        posSleepTrendListEl.appendChild(
+          renderStatusItem(
+            "Consistency",
+            `${formatNumber(sleepStd, 1)} h σ`,
+            sleepStd <= 0.8 ? "good" : "warn",
+            "Lower is better",
+            { importance: 6, group: "sleep_trend", related: "variability" },
+          ),
+        );
+        posSleepTrendListEl.appendChild(
+          renderStatusItem(
+            "Sleep debt",
+            `${formatNumber(debt, 1)} h`,
+            debt <= 2 ? "good" : debt <= 5 ? "warn" : "bad",
+            `${dayCount}d window`,
+            { importance: 7, group: "sleep_trend", related: "debt" },
+          ),
+        );
+
+        if (posSleepTrendNoteEl) {
+          posSleepTrendNoteEl.textContent = `${rangeLabel(dayCount)} sleep duration and consistency.`;
+        }
+      }
+
+      async function loadPosStrengthMatrix() {
+        if (!posStrengthMatrixEl || !posStrengthMatrixTableEl) return;
+        posStrengthMatrixTableEl.innerHTML = "";
+        if (posStrengthMatrixNoteEl) posStrengthMatrixNoteEl.textContent = "";
+
+        const [metricsResp, baselineResp] = await Promise.all([
+          supabase
+            .from("speediance_exercise_session_metrics")
+            .select("action_library_group_id,action_library_name,quality_score,completion_ratio,max_watts,watt_asym_pct,speed_asym_pct,amplitude_asym_pct")
+            .order("session_date", { ascending: false })
+            .limit(200),
+          supabase
+            .from("speediance_exercise_baselines")
+            .select("action_library_group_id,max_watts"),
+        ]);
+
+        const metrics = metricsResp.data || [];
+        if (!metrics.length) {
+          if (posStrengthMatrixNoteEl) posStrengthMatrixNoteEl.textContent = "No strength metrics yet.";
+          return;
+        }
+
+        const baselineMap = new Map();
+        (baselineResp.data || []).forEach((row) => {
+          if (row.action_library_group_id) baselineMap.set(row.action_library_group_id, row);
+        });
+
+        const byExercise = {};
+        metrics.forEach((row) => {
+          const key = row.action_library_group_id;
+          if (!key) return;
+          if (!byExercise[key]) {
+            byExercise[key] = {
+              name: row.action_library_name || `Exercise ${key}`,
+              quality: [],
+              asym: [],
+              completion: [],
+              maxWatts: [],
+              baseline: baselineMap.get(key),
+            };
+          }
+          if (row.quality_score != null) byExercise[key].quality.push(row.quality_score);
+          if (row.completion_ratio != null) byExercise[key].completion.push(row.completion_ratio);
+          if (row.max_watts != null) byExercise[key].maxWatts.push(row.max_watts);
+          const asymVals = [row.watt_asym_pct, row.speed_asym_pct, row.amplitude_asym_pct].filter((v) => v != null);
+          if (asymVals.length) byExercise[key].asym.push(Math.max(...asymVals));
+        });
+
+        const rows = Object.values(byExercise)
+          .map((item) => {
+            const quality = average(item.quality) ?? 0;
+            const asym = item.asym.length ? Math.max(...item.asym) : 0;
+            const completion = average(item.completion) ?? 0;
+            const maxWatts = item.maxWatts.length ? Math.max(...item.maxWatts) : 0;
+            const baselineWatts = item.baseline?.max_watts ?? null;
+            const powerPct = baselineWatts ? (maxWatts / baselineWatts) * 100 : null;
+            return { name: item.name, quality, asym, completion, powerPct };
+          })
+          .sort((a, b) => b.quality - a.quality)
+          .slice(0, 8);
+
+        const header = document.createElement("div");
+        header.className = "matrix-row matrix-header";
+        header.innerHTML = `
+          <div>Exercise</div>
+          <div>Quality</div>
+          <div>Asym</div>
+          <div>Completion</div>
+          <div>Power %</div>
+        `;
+        posStrengthMatrixTableEl.appendChild(header);
+
+        rows.forEach((row) => {
+          const rowEl = document.createElement("div");
+          rowEl.className = "matrix-row";
+          const qualityPct = Math.min(100, Math.max(0, row.quality));
+          const asymPct = Math.min(100, Math.max(0, row.asym));
+          const completionPct = Math.min(100, Math.max(0, row.completion * 100));
+          const powerPct = row.powerPct != null ? Math.min(140, Math.max(0, row.powerPct)) : 0;
+
+          rowEl.innerHTML = `
+            <div class="matrix-name">${row.name}</div>
+            <div>
+              <div class="matrix-bar"><span style="width:${qualityPct}%;"></span></div>
+              <div class="matrix-value">${formatNumber(row.quality, 0)}</div>
+            </div>
+            <div>
+              <div class="matrix-bar"><span style="width:${asymPct}%; background: rgba(248,113,113,0.8);"></span></div>
+              <div class="matrix-value">${formatNumber(row.asym, 1)}%</div>
+            </div>
+            <div>
+              <div class="matrix-bar"><span style="width:${completionPct}%; background: rgba(34,197,94,0.8);"></span></div>
+              <div class="matrix-value">${formatNumber(completionPct, 0)}%</div>
+            </div>
+            <div>
+              <div class="matrix-bar"><span style="width:${Math.min(powerPct, 100)}%; background: rgba(14,165,233,0.8);"></span></div>
+              <div class="matrix-value">${row.powerPct != null ? `${formatNumber(row.powerPct, 0)}%` : "—"}</div>
+            </div>
+          `;
+          posStrengthMatrixTableEl.appendChild(rowEl);
+        });
+
+        if (posStrengthMatrixNoteEl) {
+          posStrengthMatrixNoteEl.textContent = "Top exercises by quality, with asymmetry and completion context.";
         }
       }
 
@@ -2709,9 +3106,11 @@
         if (viewId === "overview") {
           await loadPosHeatmap();
           await loadPosStravaFitness();
+          await loadPosRelations();
           await loadPosTrends();
           await loadPosRecovery();
           await loadPosNutrition();
+          await loadPosSleepTrend();
           await loadPosSleepPlan();
           await loadPosStats();
           return;
@@ -2719,6 +3118,7 @@
         if (viewId === "training") {
           await loadPosHeatmap();
           await loadPosStravaFitness();
+          await loadPosRelations();
           await loadPosTrends();
           await loadPosStats();
           await loadPosAppleHealth();
@@ -2727,6 +3127,7 @@
         if (viewId === "strength") {
           await loadPosStrengthScatter();
           await loadPosBaselines();
+          await loadPosStrengthMatrix();
           await loadPosQuality();
           await loadPosLastSession();
           await loadPosQualityTrends();
@@ -2740,6 +3141,7 @@
         }
         if (viewId === "sleep") {
           await loadPosRecovery();
+          await loadPosSleepTrend();
           await loadPosSleepPlan();
           return;
         }
@@ -3137,6 +3539,14 @@
         if (!values || !values.length) return null;
         const sum = values.reduce((acc, value) => acc + value, 0);
         return sum / values.length;
+      }
+
+      function stddev(values) {
+        if (!values || values.length < 2) return null;
+        const mean = average(values);
+        if (mean == null) return null;
+        const variance = values.reduce((acc, val) => acc + (val - mean) ** 2, 0) / values.length;
+        return Math.sqrt(variance);
       }
 
       function trendDelta(values) {
