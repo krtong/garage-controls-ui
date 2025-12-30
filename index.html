@@ -306,6 +306,37 @@
         color: var(--muted);
         margin-top: 6px;
       }
+      .trend-block {
+        grid-column: 1 / -1;
+        display: grid;
+        gap: 6px;
+      }
+      .trend-lines {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 8px;
+        align-items: center;
+      }
+      .trend-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .trend-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(148, 163, 184, 0.9);
+      }
+      .trend-stats {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .weakness-note {
+        font-size: 12px;
+        color: rgba(248, 250, 252, 0.9);
+      }
       .list-row strong {
         display: block;
         color: var(--text);
@@ -483,14 +514,14 @@
         </div>
         <div id="pos-quality-trends" class="card grid hidden">
           <div class="row-inline">
-            <div style="font-weight:600;">Quality trends</div>
+            <div style="font-weight:600;">Exercise trends</div>
             <div class="meta" id="pos-quality-trends-note">—</div>
           </div>
           <div id="pos-quality-trends-list" class="list"></div>
         </div>
         <div id="pos-weakness" class="card grid hidden">
           <div class="row-inline">
-            <div style="font-weight:600;">Weakest links</div>
+            <div style="font-weight:600;">What to fix next</div>
             <div class="meta" id="pos-weakness-note">—</div>
           </div>
           <div id="pos-weakness-list" class="list"></div>
@@ -1234,7 +1265,7 @@
         return item;
       }
 
-      function renderSparkline(values) {
+      function renderSparkline(values, color = "rgba(56,189,248,0.9)") {
         if (!values || values.length < 2) return "";
         const width = 120;
         const height = 36;
@@ -1251,9 +1282,20 @@
           .join(" ");
         return `
           <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">
-            <polyline fill="none" stroke="rgba(56,189,248,0.9)" stroke-width="2" points="${points}" />
+            <polyline fill="none" stroke="${color}" stroke-width="2" points="${points}" />
           </svg>
         `;
+      }
+
+      function clamp01(value) {
+        if (value === null || value === undefined || Number.isNaN(value)) return 0;
+        return Math.min(1, Math.max(0, value));
+      }
+
+      function average(values) {
+        if (!values || !values.length) return null;
+        const sum = values.reduce((acc, value) => acc + value, 0);
+        return sum / values.length;
       }
 
       function startOfWeekSunday(date) {
@@ -1524,9 +1566,9 @@
 
         const { data, error } = await supabase
           .from("speediance_exercise_session_metrics")
-          .select("action_library_group_id,action_library_name,session_date,quality_score")
+          .select("action_library_group_id,action_library_name,session_date,quality_score,avg_watts,avg_speed,avg_amplitude,completion_ratio,watt_asym_pct,speed_asym_pct,amplitude_asym_pct")
           .order("session_date", { ascending: false })
-          .limit(120);
+          .limit(240);
 
         if (error || !data || !data.length) {
           if (posQualityTrendsNoteEl) posQualityTrendsNoteEl.textContent = "No quality trends yet.";
@@ -1536,31 +1578,92 @@
 
         const grouped = {};
         data.forEach((row) => {
-          if (!row.quality_score) return;
+          if (!row.action_library_group_id) return;
           const key = row.action_library_group_id;
           if (!grouped[key]) {
             grouped[key] = {
               name: row.action_library_name || `Exercise ${row.action_library_group_id}`,
-              scores: [],
-              dates: [],
+              lastDate: row.session_date,
+              latest: {
+                quality: row.quality_score ?? null,
+                avgWatts: row.avg_watts ?? null,
+                avgSpeed: row.avg_speed ?? null,
+                avgAmplitude: row.avg_amplitude ?? null,
+                completion: row.completion_ratio ?? null,
+                asym: null,
+              },
+              series: {
+                quality: [],
+                asym: [],
+              },
             };
           }
-          grouped[key].scores.push(row.quality_score);
-          grouped[key].dates.push(row.session_date);
+          const asymVals = [row.watt_asym_pct, row.speed_asym_pct, row.amplitude_asym_pct].filter(
+            (value) => value !== null && value !== undefined && !Number.isNaN(value)
+          );
+          const asym = asymVals.length ? Math.max(...asymVals) : null;
+          if (grouped[key].latest.asym === null && asym !== null) {
+            grouped[key].latest.asym = asym;
+          }
+          if (row.quality_score !== null && row.quality_score !== undefined) {
+            grouped[key].series.quality.push(row.quality_score);
+          }
+          if (asym !== null) {
+            grouped[key].series.asym.push(asym);
+          }
         });
 
         Object.values(grouped)
-          .map((item) => ({
-            name: item.name,
-            scores: item.scores.slice(0, 6).reverse(),
-            last: item.scores[0],
-          }))
-          .sort((a, b) => (b.last ?? 0) - (a.last ?? 0))
+          .map((item) => {
+            const qualitySeries = item.series.quality.slice(0, 6).reverse();
+            const asymSeries = item.series.asym.slice(0, 6).reverse();
+            return {
+              name: item.name,
+              lastDate: item.lastDate,
+              latest: item.latest,
+              qualitySeries,
+              asymSeries,
+            };
+          })
+          .sort((a, b) => new Date(b.lastDate ?? 0) - new Date(a.lastDate ?? 0))
           .slice(0, 5)
           .forEach((item) => {
-            const spark = renderSparkline(item.scores);
-            const scoreLabel = item.last != null ? `${formatNumber(item.last, 1)}` : "—";
-            const meta = spark ? `<span class="list-row">${spark}</span>` : "";
+            const scoreLabel =
+              item.latest.quality != null ? `${formatNumber(item.latest.quality, 1)}` : "—";
+            const qualitySpark = renderSparkline(item.qualitySeries, "rgba(56,189,248,0.9)");
+            const asymSpark = renderSparkline(item.asymSeries, "rgba(248,113,113,0.9)");
+            const statParts = [];
+            if (item.latest.avgWatts != null) statParts.push(`Avg ${formatNumber(item.latest.avgWatts, 0)} W`);
+            if (item.latest.avgSpeed != null) statParts.push(`Speed ${formatNumber(item.latest.avgSpeed, 2)}`);
+            if (item.latest.avgAmplitude != null) statParts.push(`ROM ${formatNumber(item.latest.avgAmplitude, 2)}`);
+            if (item.latest.completion != null) {
+              statParts.push(`Comp ${formatNumber(item.latest.completion * 100, 0)}%`);
+            }
+            if (item.latest.asym != null) statParts.push(`Asym ${formatNumber(item.latest.asym, 1)}%`);
+            const statsLine = statParts.join(" · ");
+            const trendBlocks = [];
+            if (qualitySpark) {
+              trendBlocks.push(`
+                <div class="trend-item">
+                  <div class="trend-label">Quality</div>
+                  ${qualitySpark}
+                </div>
+              `);
+            }
+            if (asymSpark) {
+              trendBlocks.push(`
+                <div class="trend-item">
+                  <div class="trend-label">Asymmetry</div>
+                  ${asymSpark}
+                </div>
+              `);
+            }
+            const meta = `
+              <div class="trend-block">
+                ${trendBlocks.length ? `<div class="trend-lines">${trendBlocks.join("")}</div>` : ""}
+                ${statsLine ? `<div class="trend-stats">${statsLine}</div>` : ""}
+              </div>
+            `;
             posQualityTrendsListEl.appendChild(renderStatList(item.name, scoreLabel, meta));
           });
       }
@@ -1572,9 +1675,9 @@
 
         const { data, error } = await supabase
           .from("speediance_exercise_session_metrics")
-          .select("action_library_group_id,action_library_name,quality_score,watt_asym_pct,speed_asym_pct,amplitude_asym_pct")
+          .select("action_library_group_id,action_library_name,quality_score,rep_time_cv,completion_ratio,watt_asym_pct,speed_asym_pct,amplitude_asym_pct")
           .order("session_date", { ascending: false })
-          .limit(200);
+          .limit(240);
 
         if (error || !data || !data.length) {
           if (posWeaknessNoteEl) posWeaknessNoteEl.textContent = "No weakness data yet.";
@@ -1590,21 +1693,29 @@
               name: row.action_library_name || `Exercise ${row.action_library_group_id}`,
               scores: [],
               asym: [],
+              repCv: [],
+              completion: [],
             };
           }
           if (row.quality_score != null) byExercise[key].scores.push(row.quality_score);
+          if (row.rep_time_cv != null) byExercise[key].repCv.push(row.rep_time_cv);
+          if (row.completion_ratio != null) byExercise[key].completion.push(row.completion_ratio);
           const asymVals = [row.watt_asym_pct, row.speed_asym_pct, row.amplitude_asym_pct].filter((v) => v != null);
           if (asymVals.length) byExercise[key].asym.push(Math.max(...asymVals));
         });
 
         const ranked = Object.values(byExercise)
           .map((item) => {
-            const avgScore = item.scores.length ? item.scores.reduce((a, b) => a + b, 0) / item.scores.length : null;
+            const avgScore = average(item.scores);
             const maxAsym = item.asym.length ? Math.max(...item.asym) : null;
-            const scoreNorm = avgScore != null ? Math.max(0, Math.min(1, avgScore / 100)) : 0;
-            const asymNorm = maxAsym != null ? Math.max(0, Math.min(1, maxAsym / 100)) : 0;
-            const weakness = (1 - scoreNorm) * 0.6 + asymNorm * 0.4;
-            return { name: item.name, avgScore, maxAsym, weakness };
+            const avgRepCv = average(item.repCv);
+            const avgCompletion = average(item.completion);
+            const scoreNorm = avgScore != null ? clamp01(avgScore / 100) : 0;
+            const asymNorm = maxAsym != null ? clamp01(maxAsym / 100) : 0;
+            const repCvNorm = avgRepCv != null ? clamp01(avgRepCv / 0.35) : 0;
+            const completionNorm = avgCompletion != null ? clamp01(1 - avgCompletion) : 0;
+            const weakness = (1 - scoreNorm) * 0.5 + asymNorm * 0.25 + repCvNorm * 0.15 + completionNorm * 0.1;
+            return { name: item.name, avgScore, maxAsym, avgRepCv, avgCompletion, weakness, scoreNorm, asymNorm, repCvNorm, completionNorm };
           })
           .sort((a, b) => b.weakness - a.weakness)
           .slice(0, 5);
@@ -1612,8 +1723,32 @@
         ranked.forEach((item) => {
           const scoreLabel = item.avgScore != null ? `${formatNumber(item.avgScore, 1)}` : "—";
           const metaParts = [];
-          if (item.maxAsym != null) metaParts.push(`Asym ${formatNumber(item.maxAsym, 1)}%`);
-          posWeaknessListEl.appendChild(renderStatList(item.name, scoreLabel, metaParts.join(" · ")));
+          if (item.maxAsym != null) metaParts.push(`Max asym ${formatNumber(item.maxAsym, 1)}%`);
+          if (item.avgRepCv != null) metaParts.push(`Rep CV ${formatNumber(item.avgRepCv, 2)}`);
+          if (item.avgCompletion != null) metaParts.push(`Completion ${formatNumber(item.avgCompletion * 100, 0)}%`);
+
+          const factors = [
+            { key: "quality", value: 1 - item.scoreNorm, label: "Quality" },
+            { key: "asym", value: item.asymNorm, label: "Asymmetry" },
+            { key: "rep", value: item.repCvNorm, label: "Tempo" },
+            { key: "completion", value: item.completionNorm, label: "Completion" },
+          ].sort((a, b) => b.value - a.value);
+          const driver = factors[0]?.key;
+          let fixNote = "Tighten form and reduce load 10–20% until scores stabilize.";
+          if (driver === "asym") {
+            fixNote = "Fix asymmetry: drop load 10–20%, add unilateral reps, slow eccentric.";
+          } else if (driver === "rep") {
+            fixNote = "Fix tempo: use 3-1-1 cadence and full ROM for 1–2 sessions.";
+          } else if (driver === "completion") {
+            fixNote = "Fix completion: reduce target reps or add 20–30s rest.";
+          }
+          const meta = `
+            <div class="trend-block">
+              ${metaParts.length ? `<div class="trend-stats">${metaParts.join(" · ")}</div>` : ""}
+              <div class="weakness-note">Fix: ${fixNote}</div>
+            </div>
+          `;
+          posWeaknessListEl.appendChild(renderStatList(item.name, scoreLabel, meta));
         });
       }
 
