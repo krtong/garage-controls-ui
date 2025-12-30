@@ -351,6 +351,206 @@
         color: var(--accent);
         font-size: 18px;
       }
+      .gauge-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      }
+      .gauge-card {
+        border-radius: 16px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.75);
+        padding: 12px;
+        display: grid;
+        gap: 8px;
+        align-items: center;
+        justify-items: center;
+        text-align: center;
+      }
+      .gauge-title {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .gauge-value {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .gauge-svg {
+        width: 110px;
+        height: 110px;
+      }
+      .donut-card {
+        border-radius: 16px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.75);
+        padding: 14px;
+        display: grid;
+        gap: 12px;
+      }
+      .donut-chart {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        margin: 0 auto;
+        display: grid;
+        place-items: center;
+        background: conic-gradient(#38bdf8 0% 33%, #22c55e 33% 66%, #f59e0b 66% 100%);
+      }
+      .donut-hole {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: rgba(9, 13, 26, 0.9);
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend {
+        display: grid;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .legend-swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+      }
+      .swatch-protein { background: #38bdf8; }
+      .swatch-carbs { background: #22c55e; }
+      .swatch-fat { background: #f59e0b; }
+      .stars {
+        display: inline-flex;
+        gap: 4px;
+        font-size: 14px;
+        color: #facc15;
+      }
+      .star-off {
+        color: rgba(148, 163, 184, 0.5);
+      }
+      .threshold-bar {
+        position: relative;
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(248,113,113,0.25) 0%, rgba(249,115,22,0.25) 45%, rgba(34,197,94,0.25) 75%);
+        overflow: hidden;
+        margin-top: 8px;
+      }
+      .threshold-marker {
+        position: absolute;
+        top: -4px;
+        width: 2px;
+        height: 18px;
+        background: #e2e8f0;
+      }
+      .gauge-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      }
+      .gauge-card {
+        border-radius: 16px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.75);
+        padding: 12px;
+        display: grid;
+        gap: 8px;
+        align-items: center;
+        justify-items: center;
+        text-align: center;
+      }
+      .gauge-title {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .gauge-value {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .gauge-svg {
+        width: 110px;
+        height: 110px;
+      }
+      .donut-card {
+        border-radius: 16px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.75);
+        padding: 14px;
+        display: grid;
+        gap: 12px;
+      }
+      .donut-chart {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        margin: 0 auto;
+        display: grid;
+        place-items: center;
+        background: conic-gradient(#38bdf8 0% 33%, #22c55e 33% 66%, #f59e0b 66% 100%);
+      }
+      .donut-hole {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: rgba(9, 13, 26, 0.9);
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend {
+        display: grid;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .legend-swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+      }
+      .swatch-protein { background: #38bdf8; }
+      .swatch-carbs { background: #22c55e; }
+      .swatch-fat { background: #f59e0b; }
+      .stars {
+        display: inline-flex;
+        gap: 4px;
+        font-size: 14px;
+        color: #facc15;
+      }
+      .star-off {
+        color: rgba(148, 163, 184, 0.5);
+      }
+      .threshold-bar {
+        position: relative;
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(248,113,113,0.25) 0%, rgba(249,115,22,0.25) 45%, rgba(34,197,94,0.25) 75%);
+        overflow: hidden;
+        margin-top: 8px;
+      }
+      .threshold-marker {
+        position: absolute;
+        top: -4px;
+        width: 2px;
+        height: 18px;
+        background: #e2e8f0;
+      }
       .state-metric {
         background: rgba(12, 18, 34, 0.7);
         border: 1px solid rgba(42, 51, 82, 0.5);
@@ -1685,6 +1885,79 @@
         return item;
       }
 
+      function renderGauge({ label, value, percent, icon }) {
+        const safePercent = Math.max(0, Math.min(100, percent ?? 0));
+        const radius = 42;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (safePercent / 100) * circumference;
+        const tone = safePercent >= 90 ? "good" : safePercent >= 60 ? "warn" : "bad";
+        const svg = `
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="${radius}" stroke="rgba(148,163,184,0.2)" stroke-width="10" fill="none" />
+            <circle cx="60" cy="60" r="${radius}" stroke="currentColor" stroke-width="10" fill="none"
+              stroke-dasharray="${circumference.toFixed(1)}"
+              stroke-dashoffset="${offset.toFixed(1)}"
+              stroke-linecap="round"
+              transform="rotate(-90 60 60)" />
+            <text x="60" y="64" text-anchor="middle" font-size="16" fill="#e2e8f0">${safePercent}%</text>
+          </svg>
+        `;
+        const card = document.createElement("div");
+        card.className = "gauge-card";
+        card.innerHTML = `
+          <div class="gauge-title">${icon ? `${icon} ` : ""}${label}</div>
+          <div style="color: var(--${tone === "good" ? "success" : tone === "warn" ? "warn" : "danger"});">${svg}</div>
+          <div class="gauge-value">${value}</div>
+        `;
+        return card;
+      }
+
+      function renderStars(score) {
+        const stars = document.createElement("div");
+        stars.className = "stars";
+        const max = 5;
+        const count = Math.round(Math.max(0, Math.min(score, max)));
+        for (let i = 0; i < max; i += 1) {
+          const span = document.createElement("span");
+          span.textContent = "★";
+          if (i >= count) span.className = "star-off";
+          stars.appendChild(span);
+        }
+        return stars;
+      }
+
+      function renderThresholdBar(percent) {
+        const wrap = document.createElement("div");
+        wrap.className = "threshold-bar";
+        const marker = document.createElement("div");
+        marker.className = "threshold-marker";
+        marker.style.left = `${Math.max(0, Math.min(percent, 100))}%`;
+        wrap.appendChild(marker);
+        return wrap;
+      }
+
+      function renderMacroDonut({ proteinPct, carbsPct, fatPct }) {
+        const donut = document.createElement("div");
+        donut.className = "donut-card";
+        const p = Math.round(proteinPct);
+        const c = Math.round(carbsPct);
+        const f = Math.round(fatPct);
+        const startC = p;
+        const startF = p + c;
+        donut.innerHTML = `
+          <div class="list-title">Macro distribution</div>
+          <div class="donut-chart" style="background: conic-gradient(#38bdf8 0% ${p}%, #22c55e ${startC}% ${startF}%, #f59e0b ${startF}% 100%);">
+            <div class="donut-hole">${p}% P</div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch swatch-protein"></span>Protein ${p}%</div>
+            <div class="legend-item"><span class="legend-swatch swatch-carbs"></span>Carbs ${c}%</div>
+            <div class="legend-item"><span class="legend-swatch swatch-fat"></span>Fat ${f}%</div>
+          </div>
+        `;
+        return donut;
+      }
+
       function bandFromScore(score) {
         if (score === null || score === undefined || Number.isNaN(score)) {
           return { label: "Unknown", tone: "warn", percent: 40 };
@@ -2007,6 +2280,9 @@
           { label: "Fat", actual: metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g" },
         ];
 
+        const gaugesWrap = document.createElement("div");
+        gaugesWrap.className = "gauge-grid";
+
         rows.forEach((row) => {
           const actualVal = row.actual;
           const targetVal = row.target;
@@ -2014,15 +2290,39 @@
             posNutritionListEl.appendChild(renderStatusItem(row.label, "No data", "warn", "Needs logging"));
             return;
           }
-          posNutritionListEl.appendChild(
-            renderGoalBar({
+          const percent = (actualVal / targetVal) * 100;
+          const icon = row.label === "Calories" ? "🍽️" : row.label === "Protein" ? "🥩" : row.label === "Carbs" ? "🍞" : "🥑";
+          gaugesWrap.appendChild(
+            renderGauge({
               label: row.label,
-              actual: actualVal,
-              target: targetVal,
-              unit: row.unit,
+              value: `${formatNumber(actualVal, 1)} ${row.unit} / ${formatNumber(targetVal, 0)} ${row.unit}`,
+              percent,
+              icon,
             }),
           );
         });
+
+        if (gaugesWrap.children.length) {
+          posNutritionListEl.appendChild(gaugesWrap);
+        }
+
+        const protein = rows.find((row) => row.label === "Protein");
+        const carbs = rows.find((row) => row.label === "Carbs");
+        const fat = rows.find((row) => row.label === "Fat");
+        if (protein?.actual && carbs?.actual && fat?.actual) {
+          const proteinCalories = protein.actual * 4;
+          const carbsCalories = carbs.actual * 4;
+          const fatCalories = fat.actual * 9;
+          const total = proteinCalories + carbsCalories + fatCalories;
+          if (total > 0) {
+            const donut = renderMacroDonut({
+              proteinPct: (proteinCalories / total) * 100,
+              carbsPct: (carbsCalories / total) * 100,
+              fatPct: (fatCalories / total) * 100,
+            });
+            posNutritionListEl.appendChild(donut);
+          }
+        }
 
         const legend = document.createElement("div");
         legend.className = "goal-legend";
@@ -2055,9 +2355,12 @@
         data.forEach((row) => {
           const name = row.action_library_name || `Exercise ${row.action_library_group_id}`;
           const ratio = maxWatts ? (row.max_watts || 0) / maxWatts : 0;
+          const percent = ratio * 100;
           const tone = ratio > 0.75 ? "good" : ratio > 0.4 ? "warn" : "bad";
           const status = ratio > 0.75 ? "High power" : ratio > 0.4 ? "Moderate" : "Develop";
-          posBaselinesListEl.appendChild(renderBarItem(name, status, tone, ratio * 100));
+          const item = renderStatusItem(name, status, tone, "Relative to your top baseline");
+          item.appendChild(renderThresholdBar(percent));
+          posBaselinesListEl.appendChild(item);
         });
       }
 
@@ -2081,7 +2384,9 @@
         data.forEach((row) => {
           const label = row.session_date ? new Date(row.session_date).toLocaleDateString() : row.training_id;
           const band = qualityBand(row.quality_score);
-          posQualityListEl.appendChild(renderStatusItem(label, band.label, band.tone));
+          const item = renderStatusItem(label, band.label, band.tone, "Session quality");
+          item.appendChild(renderStars((row.quality_score ?? 0) / 20));
+          posQualityListEl.appendChild(item);
         });
       }
 
@@ -2124,7 +2429,9 @@
         metricsData.forEach((row) => {
           const title = row.action_library_name || "Exercise";
           const band = qualityBand(row.quality_score);
-          posLastSessionListEl.appendChild(renderStatusItem(title, band.label, band.tone));
+          const item = renderStatusItem(title, band.label, band.tone, "Last session quality");
+          item.appendChild(renderStars((row.quality_score ?? 0) / 20));
+          posLastSessionListEl.appendChild(item);
         });
       }
 
