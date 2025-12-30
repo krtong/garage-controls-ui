@@ -449,12 +449,22 @@
         overflow: hidden;
         margin-top: 8px;
       }
+      .threshold-wrap {
+        display: grid;
+        gap: 4px;
+      }
       .threshold-marker {
         position: absolute;
         top: -4px;
         width: 2px;
         height: 18px;
         background: #e2e8f0;
+      }
+      .bar-scale {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: var(--muted);
       }
       .gauge-grid {
         display: grid;
@@ -1315,7 +1325,7 @@
             value: readinessBand.label,
             tone: readinessBand.tone,
             icon: "⚡️",
-            sub: "How ready you are today",
+            sub: readiness?.readiness_score != null ? `Score ${readiness.readiness_score}/100` : "Score missing",
             progress: readiness?.readiness_score,
           }),
         );
@@ -1325,7 +1335,7 @@
             value: `${training?.workout_count_7d ?? 0}`,
             tone: frequencyBand(training?.workout_count_7d ?? 0).tone,
             icon: "📅",
-            sub: "Sessions logged this week",
+            sub: `Endurance ${training?.endurance_sessions_7d ?? 0} · Strength ${training?.strength_sessions_7d ?? 0}`,
           }),
         );
         posSummaryMetricsEl.appendChild(
@@ -1334,17 +1344,17 @@
             value: adherence ? `${Math.round(adherence * 100)}%` : "—",
             tone: adherenceTone,
             icon: "✅",
-            sub: "Planned vs completed",
+            sub: adherence ? `Planned vs completed` : "No plan data",
             progress: adherence ? adherence * 100 : null,
           }),
         );
         posSummaryMetricsEl.appendChild(
           renderKpiCard({
             label: "Strength load",
-            value: training?.strength_capacity_7d ? "Tracked" : "Missing",
+            value: training?.strength_capacity_7d ? `${formatNumber(training.strength_capacity_7d, 0)}` : "—",
             tone: training?.strength_capacity_7d ? "good" : "bad",
             icon: "🏋️",
-            sub: "Speediance volume signal",
+            sub: training?.strength_capacity_7d ? "7d capacity (load)" : "No strength load data",
           }),
         );
 
@@ -1473,11 +1483,13 @@
         const strengthTrend = trendBadge(strengthSeries);
 
         const loadAvg = avg(loadSeries) ?? 0;
+        const loadMin = Math.min(...loadSeries);
+        const loadMax = Math.max(...loadSeries);
         const loadEntry = renderStatusItem(
           "Training load",
           loadTrend.label,
           loadTrend.tone,
-          `Avg ${formatNumber(loadAvg, 0)} load/day`
+          `Avg ${formatNumber(loadAvg, 0)} · Min ${formatNumber(loadMin, 0)} · Max ${formatNumber(loadMax, 0)}`
         );
         const loadSpark = document.createElement("div");
         loadSpark.className = "trend-spark";
@@ -1490,11 +1502,13 @@
         posTrendsListEl.appendChild(loadEntry);
 
         const distanceTotal = distanceSeries.reduce((acc, val) => acc + val, 0);
+        const distanceMin = Math.min(...distanceSeries);
+        const distanceMax = Math.max(...distanceSeries);
         const enduranceEntry = renderStatusItem(
           "Endurance distance",
           enduranceTrend.label,
           enduranceTrend.tone,
-          `Total ${formatNumber(formatMiles(distanceTotal) ?? 0, 1)} mi`
+          `Total ${formatNumber(formatMiles(distanceTotal) ?? 0, 1)} mi · Min ${formatNumber(formatMiles(distanceMin) ?? 0, 1)} · Max ${formatNumber(formatMiles(distanceMax) ?? 0, 1)}`
         );
         const enduranceSpark = document.createElement("div");
         enduranceSpark.className = "trend-spark";
@@ -1507,11 +1521,13 @@
         posTrendsListEl.appendChild(enduranceEntry);
 
         const strengthTotal = strengthSeries.reduce((acc, val) => acc + val, 0);
+        const strengthMin = Math.min(...strengthSeries);
+        const strengthMax = Math.max(...strengthSeries);
         const strengthEntry = renderStatusItem(
           "Strength sessions",
           strengthTrend.label,
           strengthTrend.tone,
-          `${strengthTotal} sessions in 7d`
+          `${strengthTotal} sessions · Min ${strengthMin} · Max ${strengthMax}`
         );
         const strengthSpark = document.createElement("div");
         strengthSpark.className = "trend-spark";
@@ -1963,11 +1979,18 @@
 
       function renderThresholdBar(percent) {
         const wrap = document.createElement("div");
-        wrap.className = "threshold-bar";
+        wrap.className = "threshold-wrap";
+        const bar = document.createElement("div");
+        bar.className = "threshold-bar";
         const marker = document.createElement("div");
         marker.className = "threshold-marker";
         marker.style.left = `${Math.max(0, Math.min(percent, 100))}%`;
-        wrap.appendChild(marker);
+        bar.appendChild(marker);
+        const scale = document.createElement("div");
+        scale.className = "bar-scale";
+        scale.innerHTML = "<span>0</span><span>50</span><span>100</span>";
+        wrap.appendChild(bar);
+        wrap.appendChild(scale);
         return wrap;
       }
 
@@ -2277,7 +2300,11 @@
             posStatsListEl.appendChild(renderStatusItem(stat.label, "No data", "bad", "Log source to unlock."));
             return;
           }
-          posStatsListEl.appendChild(renderStatusItem(stat.label, "Tracked", "good", "Logged this week"));
+          const avg = stat.total / daysElapsed;
+          const decimals = stat.unit === "steps" ? 0 : 1;
+          const avgLabel = `${formatNumber(avg, decimals)} ${stat.unit}/day`;
+          const totalLabel = `Total ${formatNumber(stat.total, decimals)} ${stat.unit}`;
+          posStatsListEl.appendChild(renderStatusItem(stat.label, "Tracked", "good", `${avgLabel} · ${totalLabel}`));
         });
 
         if (!nutritionResp.data?.length && posStatsNoteEl) {
@@ -2816,7 +2843,7 @@
         }
         if (rec?.duration_min) {
           const band = durationBand(rec.duration_min);
-          posPlanBodyEl.appendChild(renderBarItem("Duration", band.label, band.tone, band.percent));
+          posPlanBodyEl.appendChild(renderBarItem("Duration", band.label, band.tone, band.percent, `${rec.duration_min} min`));
         }
         if (rec?.intensity) {
           posPlanBodyEl.appendChild(renderStatusItem("Intensity", rec.intensity, "warn"));
