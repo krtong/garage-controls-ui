@@ -474,6 +474,13 @@
           </div>
           <div id="pos-baselines-list" class="list"></div>
         </div>
+        <div id="pos-quality" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Session quality</div>
+            <div class="meta" id="pos-quality-note">—</div>
+          </div>
+          <div id="pos-quality-list" class="list"></div>
+        </div>
         <div class="actions">
           <button id="logout" class="secondary">Sign out</button>
         </div>
@@ -522,6 +529,9 @@
       const posBaselinesEl = document.getElementById("pos-baselines");
       const posBaselinesListEl = document.getElementById("pos-baselines-list");
       const posBaselinesNoteEl = document.getElementById("pos-baselines-note");
+      const posQualityEl = document.getElementById("pos-quality");
+      const posQualityListEl = document.getElementById("pos-quality-list");
+      const posQualityNoteEl = document.getElementById("pos-quality-note");
       const posRunStatusEl = document.getElementById("pos-run-status");
       const garageSettingsEl = document.getElementById("garage-settings");
       const viewEventsEl = document.getElementById("view-events");
@@ -544,7 +554,7 @@
         },
         pos: {
           label: "Personal Ops",
-          visibleIds: ["pos-summary", "pos-plan", "pos-stats", "pos-baselines"],
+          visibleIds: ["pos-summary", "pos-plan", "pos-stats", "pos-baselines", "pos-quality"],
           hiddenIds: [
             "garage-settings",
             "garage-data-card",
@@ -1130,6 +1140,7 @@
           await loadPosPlan();
           await loadPosStats();
           await loadPosBaselines();
+          await loadPosQuality();
           return;
         }
         if (currentDataView === "state") {
@@ -1410,7 +1421,7 @@
 
         const { data, error } = await supabase
           .from("speediance_exercise_baselines")
-          .select("action_library_group_id,action_library_name,max_weight,max_watts,avg_watts,total_reps,last_seen_at")
+          .select("action_library_group_id,action_library_name,max_weight,max_watts,avg_watts,one_rm,watt_asym_pct,speed_asym_pct,amplitude_asym_pct,total_reps,last_seen_at")
           .order("max_watts", { ascending: false })
           .limit(6);
 
@@ -1432,6 +1443,33 @@
           if (row.total_reps) metaParts.push(`${formatNumber(row.total_reps, 0)} reps`);
           if (row.last_seen_at) metaParts.push(`Last ${formatTimestamp(row.last_seen_at)}`);
           posBaselinesListEl.appendChild(renderStatList(name, maxWatts, metaParts.join(" · ")));
+        });
+      }
+
+      async function loadPosQuality() {
+        if (!posQualityListEl) return;
+        posQualityListEl.innerHTML = "";
+        if (posQualityNoteEl) posQualityNoteEl.textContent = "";
+
+        const { data, error } = await supabase
+          .from("speediance_training_session_scores")
+          .select("training_id,session_date,quality_score,exercise_count,total_reps")
+          .order("session_date", { ascending: false })
+          .limit(6);
+
+        if (error || !data || !data.length) {
+          if (posQualityNoteEl) posQualityNoteEl.textContent = "No session quality data yet.";
+          return;
+        }
+        if (posQualityNoteEl) posQualityNoteEl.textContent = "Recent strength sessions";
+
+        data.forEach((row) => {
+          const label = row.session_date ? new Date(row.session_date).toLocaleDateString() : row.training_id;
+          const score = row.quality_score != null ? `${formatNumber(row.quality_score, 1)}` : "—";
+          const metaParts = [];
+          if (row.exercise_count) metaParts.push(`${row.exercise_count} exercises`);
+          if (row.total_reps) metaParts.push(`${row.total_reps} reps`);
+          posQualityListEl.appendChild(renderStatList(label, score, metaParts.join(" · ")));
         });
       }
 
