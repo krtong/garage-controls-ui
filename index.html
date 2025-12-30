@@ -498,6 +498,13 @@
           <div id="pos-stats-list" class="list"></div>
           <div class="meta" id="pos-stats-note"></div>
         </div>
+        <div id="pos-nutrition" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Nutrition targets</div>
+            <div class="meta" id="pos-nutrition-note">—</div>
+          </div>
+          <div id="pos-nutrition-list" class="list"></div>
+        </div>
         <div id="pos-baselines" class="card grid hidden">
           <div class="row-inline">
             <div style="font-weight:600;">Strength baselines</div>
@@ -578,6 +585,9 @@
       const posStatsListEl = document.getElementById("pos-stats-list");
       const posStatsRangeEl = document.getElementById("pos-stats-range");
       const posStatsNoteEl = document.getElementById("pos-stats-note");
+      const posNutritionEl = document.getElementById("pos-nutrition");
+      const posNutritionListEl = document.getElementById("pos-nutrition-list");
+      const posNutritionNoteEl = document.getElementById("pos-nutrition-note");
       const posBaselinesEl = document.getElementById("pos-baselines");
       const posBaselinesListEl = document.getElementById("pos-baselines-list");
       const posBaselinesNoteEl = document.getElementById("pos-baselines-note");
@@ -615,6 +625,7 @@
             "pos-summary",
             "pos-plan",
             "pos-stats",
+            "pos-nutrition",
             "pos-baselines",
             "pos-quality",
             "pos-last-session",
@@ -628,6 +639,7 @@
             "pos-summary",
             "pos-plan",
             "pos-stats",
+            "pos-nutrition",
             "pos-baselines",
             "pos-quality",
             "pos-last-session",
@@ -1218,6 +1230,7 @@
           await loadPosSummary();
           await loadPosPlan();
           await loadPosStats();
+          await loadPosNutrition();
           await loadPosBaselines();
           await loadPosQuality();
           await loadPosLastSession();
@@ -1538,6 +1551,66 @@
         if (!nutritionResp.data?.length && posStatsNoteEl) {
           posStatsNoteEl.textContent = "Nutrition not connected yet.";
         }
+      }
+
+      async function loadPosNutrition() {
+        if (!posNutritionListEl) return;
+        posNutritionListEl.innerHTML = "";
+        if (posNutritionNoteEl) posNutritionNoteEl.textContent = "";
+
+        const dateKey = localDateKey();
+        const [metricsResp, planResp] = await Promise.all([
+          supabase
+            .from("pos_day_metrics")
+            .select("date,nutrition_entries_7d,calories_avg_day,protein_avg_day,carbs_avg_day,fat_avg_day")
+            .order("date", { ascending: false })
+            .limit(1),
+          supabase
+            .from("coach_plan_daily")
+            .select("date,plan_json")
+            .lte("date", dateKey)
+            .order("date", { ascending: false })
+            .limit(1),
+        ]);
+
+        const metrics = metricsResp.data?.[0] ?? null;
+        const plan = planResp.data?.[0] ?? null;
+        const targets = plan?.plan_json?.nutrition_targets ?? {};
+
+        if (!metrics && !targets) {
+          if (posNutritionNoteEl) posNutritionNoteEl.textContent = "No nutrition data yet.";
+          return;
+        }
+
+        if (posNutritionNoteEl) {
+          const entries = metrics?.nutrition_entries_7d ?? 0;
+          posNutritionNoteEl.textContent = entries ? `${entries} logs in last 7d` : "No logs yet.";
+        }
+
+        const rows = [
+          { label: "Calories", actual: metrics?.calories_avg_day, target: targets.calories_target, unit: "kcal" },
+          { label: "Protein", actual: metrics?.protein_avg_day, target: targets.protein_target_g, unit: "g" },
+          { label: "Carbs", actual: metrics?.carbs_avg_day, target: targets.carbs_target_g, unit: "g" },
+          { label: "Fat", actual: metrics?.fat_avg_day, target: targets.fat_target_g, unit: "g" },
+        ];
+
+        rows.forEach((row) => {
+          const actualVal = row.actual;
+          const targetVal = row.target;
+          const actualLabel =
+            actualVal != null && !Number.isNaN(actualVal) ? `${formatNumber(actualVal, 1)} ${row.unit}/day` : "—";
+          const targetLabel =
+            targetVal != null && !Number.isNaN(targetVal) ? `${formatNumber(targetVal, 0)} ${row.unit}` : "—";
+          let status = "no target";
+          if (targetVal && actualVal != null && !Number.isNaN(actualVal)) {
+            const ratio = actualVal / targetVal;
+            if (ratio < 0.8) status = "low";
+            else if (ratio > 1.2) status = "high";
+            else status = "on track";
+          }
+          const meta = `Actual ${actualLabel} · Target ${targetLabel} · ${status}`;
+          posNutritionListEl.appendChild(renderStatList(row.label, actualLabel, meta));
+        });
       }
 
       async function loadPosBaselines() {
