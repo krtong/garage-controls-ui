@@ -1915,7 +1915,7 @@
       let currentProcessId = "global";
       let currentDataView = "events";
       let currentView = "garage";
-      let currentPosView = "overview";
+      let currentPosView = "all";
       let currentRangeDays = 7;
       let currentWeekSport = "swim";
       const RANGE_OPTIONS = [
@@ -1924,15 +1924,7 @@
         { label: "30d", days: 30 },
         { label: "90d", days: 90 },
       ];
-      const POS_VIEW_OPTIONS = [
-        { id: "overview", label: "Overview" },
-        { id: "race", label: "Race" },
-        { id: "training", label: "Training" },
-        { id: "strength", label: "Strength" },
-        { id: "nutrition", label: "Nutrition" },
-        { id: "sleep", label: "Sleep" },
-        { id: "data", label: "Data" },
-      ];
+      const POS_VIEW_OPTIONS = [];
       const DOORS = ["Left", "Middle", "Right"];
       const EVENTS_PAGE_SIZE = 200;
       let eventsLimit = EVENTS_PAGE_SIZE;
@@ -4930,103 +4922,54 @@
       function renderPosNav() {
         if (!posNavEl) return;
         posNavEl.innerHTML = "";
-        POS_VIEW_OPTIONS.forEach((option) => {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = option.label;
-          if (currentPosView === option.id) btn.classList.add("active");
-          btn.addEventListener("click", async () => {
-            currentPosView = option.id;
-            renderPosNav();
-            setPosSubview(option.id);
-            await loadPosViewData(option.id);
-          });
-          posNavEl.appendChild(btn);
-        });
+        posNavEl.classList.add("hidden");
+        const labelEl = posNavEl.previousElementSibling;
+        if (labelEl && labelEl.classList.contains("meta")) {
+          labelEl.classList.add("hidden");
+        }
       }
 
       function setPosSubview(viewId) {
         if (!posDashboardEl) return;
         const nodes = posDashboardEl.querySelectorAll("[data-pos-view]");
         nodes.forEach((node) => {
-          const views = (node.dataset.posView || "").split(/\s+/).filter(Boolean);
-          if (!views.length) return;
-          if (views.includes(viewId)) {
-            node.classList.remove("hidden");
-          } else {
-            node.classList.add("hidden");
-          }
+          if (node.classList.contains("pos-day-drawer")) return;
+          node.classList.remove("hidden");
         });
       }
 
       async function loadPosViewData(viewId) {
         await loadPosSummary();
         await loadPosPlan();
-        if (viewId === "overview") {
-          await loadPosHeatmap();
-          await loadPosStravaFitness();
-          await loadPosLoadCapacity();
-          await loadPosWeeklyLoad();
-          await loadPosRelations();
-          await loadPosTrends();
-          await loadPosRecovery();
-          await loadPosDataHealth();
-          await loadPosNutrition();
-          await loadPosSleepTrend();
-          await loadPosSleepPlan();
-          await loadPosStats();
-          await loadPosFacial();
-          return;
-        }
-        if (viewId === "race") {
-          await loadPosRaceReadiness();
-          return;
-        }
-        if (viewId === "training") {
-          await loadPosHeatmap();
-          await loadPosStravaFitness();
-          await loadPosLoadCapacity();
-          await loadPosWeeklyLoad();
-          await loadPosRelations();
-          await loadPosTrends();
-          await loadPosTrainingWeek();
-          await loadPosFitnessCard();
-          await loadPosStreakCalendar();
-          await loadPosPowerSkills();
-          await loadPosStats();
-          await loadPosAppleHealth();
-          await loadPosDataHealth();
-          return;
-        }
-        if (viewId === "strength") {
-          await loadPosStrengthScatter();
-          await loadPosBaselines();
-          await loadPosStrengthMatrix();
-          await loadPosQuality();
-          await loadPosLastSession();
-          await loadPosQualityTrends();
-          await loadPosWeakness();
-          return;
-        }
-        if (viewId === "nutrition") {
-          await loadPosNutrition();
-          await loadPosStats();
-          return;
-        }
-        if (viewId === "sleep") {
-          await loadPosRecovery();
-          await loadPosSleepQuality();
-          await loadPosSleepScoreGrid();
-          await loadPosSleepHeartRate();
-          await loadPosSleepTrend();
-          await loadPosSleepPlan();
-          return;
-        }
-        if (viewId === "data") {
-          await loadPosDataHealth();
-          await loadPosStats();
-          await loadPosAppleHealth();
-        }
+        await loadPosRaceReadiness();
+        await loadPosHeatmap();
+        await loadPosStravaFitness();
+        await loadPosLoadCapacity();
+        await loadPosWeeklyLoad();
+        await loadPosRelations();
+        await loadPosTrends();
+        await loadPosRecovery();
+        await loadPosDataHealth();
+        await loadPosNutrition();
+        await loadPosSleepTrend();
+        await loadPosSleepPlan();
+        await loadPosStats();
+        await loadPosFacial();
+        await loadPosTrainingWeek();
+        await loadPosFitnessCard();
+        await loadPosStreakCalendar();
+        await loadPosPowerSkills();
+        await loadPosAppleHealth();
+        await loadPosStrengthScatter();
+        await loadPosBaselines();
+        await loadPosStrengthMatrix();
+        await loadPosQuality();
+        await loadPosLastSession();
+        await loadPosQualityTrends();
+        await loadPosWeakness();
+        await loadPosSleepQuality();
+        await loadPosSleepScoreGrid();
+        await loadPosSleepHeartRate();
       }
 
       function attachMeta(el, meta) {
