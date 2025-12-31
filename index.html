@@ -3107,89 +3107,158 @@
         if (posLoadSleepChartEl) posLoadSleepChartEl.innerHTML = "";
         if (posFuelLoadChartEl) posFuelLoadChartEl.innerHTML = "";
 
+        const resolution = currentRangeDays === 1 ? "hour" : "day";
         const dayCount = Math.max(1, currentRangeDays);
         const start = rangeStartDate(dayCount);
         const startIso = start.toISOString();
         const startKey = startIso.slice(0, 10);
-        const days = [];
-        for (let i = 0; i < dayCount; i += 1) {
-          const d = new Date(start);
-          d.setDate(start.getDate() + i);
-          days.push(dateKeyFromIso(d.toISOString()));
+
+        let labels = [];
+        let loadSeries = [];
+        let sleepSeries = [];
+        let caloriesSeries = [];
+        let proteinSeries = [];
+
+        if (resolution === "hour") {
+          const hours = [];
+          for (let h = 0; h < 24; h += 1) {
+            hours.push(h);
+          }
+          labels = hours.map((h) => `${String(h).padStart(2, "0")}:00`);
+
+          const [metricsResp, nutritionResp, stravaResp] = await Promise.all([
+            supabase
+              .from("pos_day_metrics")
+              .select("date,sleep_seconds")
+              .gte("date", startKey)
+              .order("date", { ascending: true })
+              .limit(1),
+            supabase
+              .from("pos_events")
+              .select("event_timestamp,payload")
+              .eq("source", "nutrition")
+              .gte("event_timestamp", startIso),
+            supabase
+              .from("pos_events")
+              .select("event_timestamp,payload")
+              .eq("source", "strava")
+              .eq("event_type", "activity")
+              .gte("event_timestamp", startIso),
+          ]);
+
+          const sleepHours = metricsResp.data?.[0]?.sleep_seconds
+            ? metricsResp.data[0].sleep_seconds / 3600
+            : 0;
+          sleepSeries = hours.map(() => sleepHours);
+
+          const loadByHour = new Map();
+          (stravaResp.data || []).forEach((row) => {
+            const ts = new Date(row.event_timestamp);
+            const hour = ts.getHours();
+            const payload = row.payload || {};
+            const duration = Number(payload.elapsed_s ?? payload.elapsed_time ?? payload.duration_s ?? 0);
+            const minutes = Number.isNaN(duration) ? 0 : duration / 60;
+            loadByHour.set(hour, (loadByHour.get(hour) || 0) + minutes);
+          });
+          loadSeries = hours.map((h) => loadByHour.get(h) || 0);
+
+          const caloriesByHour = new Map();
+          const proteinByHour = new Map();
+          (nutritionResp.data || []).forEach((row) => {
+            const ts = new Date(row.event_timestamp);
+            const hour = ts.getHours();
+            const payload = row.payload || {};
+            const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? 0);
+            const protein = Number(payload.protein_g ?? payload.protein ?? 0);
+            if (!Number.isNaN(calories)) caloriesByHour.set(hour, (caloriesByHour.get(hour) || 0) + calories);
+            if (!Number.isNaN(protein)) proteinByHour.set(hour, (proteinByHour.get(hour) || 0) + protein);
+          });
+          caloriesSeries = hours.map((h) => caloriesByHour.get(h) || 0);
+          proteinSeries = hours.map((h) => proteinByHour.get(h) || 0);
+        } else {
+          labels = [];
+          for (let i = 0; i < dayCount; i += 1) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            labels.push(dateKeyFromIso(d.toISOString()));
+          }
+
+          const [metricsResp, nutritionResp] = await Promise.all([
+            supabase
+              .from("pos_day_metrics")
+              .select("date,training_load_today,sleep_seconds")
+              .gte("date", startKey)
+              .order("date", { ascending: true }),
+            supabase
+              .from("pos_events")
+              .select("event_timestamp,payload")
+              .eq("source", "nutrition")
+              .gte("event_timestamp", startIso),
+          ]);
+
+          const loadByDay = new Map();
+          const sleepByDay = new Map();
+          (metricsResp.data || []).forEach((row) => {
+            if (!row.date) return;
+            loadByDay.set(row.date, Number(row.training_load_today ?? 0));
+            if (row.sleep_seconds != null) {
+              sleepByDay.set(row.date, row.sleep_seconds / 3600);
+            }
+          });
+
+          const caloriesByDay = new Map();
+          const proteinByDay = new Map();
+          (nutritionResp.data || []).forEach((row) => {
+            const key = dateKeyFromIso(row.event_timestamp);
+            if (!key) return;
+            const payload = row.payload || {};
+            const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? 0);
+            const protein = Number(payload.protein_g ?? payload.protein ?? 0);
+            if (!Number.isNaN(calories)) caloriesByDay.set(key, (caloriesByDay.get(key) || 0) + calories);
+            if (!Number.isNaN(protein)) proteinByDay.set(key, (proteinByDay.get(key) || 0) + protein);
+          });
+
+          loadSeries = labels.map((d) => loadByDay.get(d) || 0);
+          sleepSeries = labels.map((d) => sleepByDay.get(d) || 0);
+          caloriesSeries = labels.map((d) => caloriesByDay.get(d) || 0);
+          proteinSeries = labels.map((d) => proteinByDay.get(d) || 0);
         }
 
-        const [metricsResp, nutritionResp] = await Promise.all([
-          supabase
-            .from("pos_day_metrics")
-            .select("date,training_load_today,sleep_seconds")
-            .gte("date", startKey)
-            .order("date", { ascending: true }),
-          supabase
-            .from("pos_events")
-            .select("event_timestamp,payload")
-            .eq("source", "nutrition")
-            .gte("event_timestamp", startIso),
-        ]);
-
-        const loadByDay = new Map();
-        const sleepByDay = new Map();
-        (metricsResp.data || []).forEach((row) => {
-          if (!row.date) return;
-          loadByDay.set(row.date, Number(row.training_load_today ?? 0));
-          if (row.sleep_seconds != null) {
-            sleepByDay.set(row.date, row.sleep_seconds / 3600);
-          }
-        });
-
-        const caloriesByDay = new Map();
-        const proteinByDay = new Map();
-        (nutritionResp.data || []).forEach((row) => {
-          const key = dateKeyFromIso(row.event_timestamp);
-          if (!key) return;
-          const payload = row.payload || {};
-          const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? 0);
-          const protein = Number(payload.protein_g ?? payload.protein ?? 0);
-          if (!Number.isNaN(calories)) caloriesByDay.set(key, (caloriesByDay.get(key) || 0) + calories);
-          if (!Number.isNaN(protein)) proteinByDay.set(key, (proteinByDay.get(key) || 0) + protein);
-        });
-
-        const loadSeries = days.map((d) => loadByDay.get(d) || 0);
-        const sleepSeries = days.map((d) => sleepByDay.get(d) || 0);
-        const caloriesSeries = days.map((d) => caloriesByDay.get(d) || 0);
-        const proteinSeries = days.map((d) => proteinByDay.get(d) || 0);
-
-        const loadAvg = avg(loadSeries) ?? 0;
-        const sleepAvg = avg(sleepSeries) ?? 0;
-        const caloriesAvg = avg(caloriesSeries) ?? 0;
-        const proteinAvg = avg(proteinSeries) ?? 0;
+        const loadStat = resolution === "hour" ? sum(loadSeries) : avg(loadSeries) ?? 0;
+        const sleepStat = resolution === "hour" ? (sleepSeries[0] || 0) : avg(sleepSeries) ?? 0;
+        const caloriesStat = resolution === "hour" ? sum(caloriesSeries) : avg(caloriesSeries) ?? 0;
+        const proteinStat = resolution === "hour" ? sum(proteinSeries) : avg(proteinSeries) ?? 0;
+        const loadLabel = resolution === "hour" ? "Load total" : "Load avg";
+        const sleepLabel = resolution === "hour" ? "Sleep last night" : "Sleep avg";
+        const caloriesLabel = resolution === "hour" ? "Calories total" : "Calories avg";
+        const proteinLabel = resolution === "hour" ? "Protein total" : "Protein avg";
 
         if (posRelationsListEl) {
           posRelationsListEl.appendChild(
             renderStatusItem(
               "Load vs sleep",
-              sleepAvg ? "Tracked" : "Sparse",
-              sleepAvg ? "good" : "warn",
-              `Load avg ${formatNumber(loadAvg, 0)} · Sleep avg ${formatNumber(sleepAvg, 1)} h`,
+              sleepStat ? "Tracked" : "Sparse",
+              sleepStat ? "good" : "warn",
+              `${loadLabel} ${formatNumber(loadStat, 0)} · ${sleepLabel} ${formatNumber(sleepStat, 1)} h`,
               { importance: 8, group: "relationships", related: "load,sleep" },
             ),
           );
           posRelationsListEl.appendChild(
             renderStatusItem(
               "Fuel vs load",
-              caloriesAvg ? "Tracked" : "Sparse",
-              caloriesAvg ? "good" : "warn",
-              `Calories avg ${formatNumber(caloriesAvg, 0)} · Protein avg ${formatNumber(proteinAvg, 0)} g`,
+              caloriesStat ? "Tracked" : "Sparse",
+              caloriesStat ? "good" : "warn",
+              `${caloriesLabel} ${formatNumber(caloriesStat, 0)} · ${proteinLabel} ${formatNumber(proteinStat, 0)} g`,
               { importance: 7, group: "relationships", related: "calories,protein,load" },
             ),
           );
         }
 
         if (posLoadSleepChartEl) {
-          const labels = days;
           const loadChart = renderLineChart({
             labels,
-            series: [{ label: "Load", color: "#38bdf8", values: loadSeries }],
-            yLabel: "Load",
+            series: [{ label: resolution === "hour" ? "Activity min" : "Load", color: "#38bdf8", values: loadSeries }],
+            yLabel: resolution === "hour" ? "Minutes" : "Load",
           });
           const sleepChart = renderLineChart({
             labels,
@@ -3200,7 +3269,6 @@
         }
 
         if (posFuelLoadChartEl) {
-          const labels = days;
           const caloriesChart = renderLineChart({
             labels,
             series: [{ label: "Calories", color: "#f59e0b", values: caloriesSeries }],
@@ -3215,7 +3283,8 @@
         }
 
         if (posRelationsNoteEl) {
-          posRelationsNoteEl.textContent = `${rangeLabel(currentRangeDays)} · relationships between load, sleep, fuel.`;
+          const resLabel = resolution === "hour" ? "Hourly" : "Daily";
+          posRelationsNoteEl.textContent = `${rangeLabel(currentRangeDays)} · ${resLabel.toLowerCase()} relationships between load, sleep, fuel.`;
         }
       }
 
@@ -3225,7 +3294,7 @@
         posSleepTrendListEl.innerHTML = "";
         if (posSleepTrendNoteEl) posSleepTrendNoteEl.textContent = "";
 
-        const dayCount = Math.max(7, Math.min(30, currentRangeDays));
+        const dayCount = Math.max(1, Math.min(30, currentRangeDays));
         const start = rangeStartDate(dayCount);
         const startKey = start.toISOString().slice(0, 10);
         const days = [];
@@ -4327,6 +4396,11 @@
         if (!values || !values.length) return null;
         const sum = values.reduce((acc, v) => acc + v, 0);
         return sum / values.length;
+      }
+
+      function sum(values) {
+        if (!values || !values.length) return 0;
+        return values.reduce((acc, v) => acc + v, 0);
       }
 
       function renderMacroDonut({ proteinPct, carbsPct, fatPct, meta = null }) {
