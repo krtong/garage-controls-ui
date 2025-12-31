@@ -1278,7 +1278,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Sleep</div>
                   <div class="pos-domain-plan" id="pos-domain-sleep-plan" data-importance="9">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-sleep-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-sleep-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Recovery drivers</div>
               </div>
@@ -1346,7 +1346,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Diet</div>
                   <div class="pos-domain-plan" id="pos-domain-diet-plan" data-importance="9">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-diet-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-diet-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Fuel coverage & targets</div>
               </div>
@@ -1367,7 +1367,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Progress report</div>
                   <div class="pos-domain-plan" id="pos-domain-progress-plan" data-importance="9">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-progress-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-progress-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Form, load, adherence</div>
               </div>
@@ -1489,7 +1489,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Weight training</div>
                   <div class="pos-domain-plan" id="pos-domain-weight-plan" data-importance="8">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-weight-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-weight-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Speediance metrics</div>
               </div>
@@ -1554,7 +1554,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Cycling</div>
                   <div class="pos-domain-plan" id="pos-domain-cycling-plan" data-importance="8">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-cycling-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-cycling-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Strava metrics</div>
               </div>
@@ -1575,7 +1575,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Running</div>
                   <div class="pos-domain-plan" id="pos-domain-running-plan" data-importance="8">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-running-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-running-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Strava metrics</div>
               </div>
@@ -1596,7 +1596,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Swimming</div>
                   <div class="pos-domain-plan" id="pos-domain-swimming-plan" data-importance="8">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-swimming-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-swimming-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Strava metrics</div>
               </div>
@@ -1617,7 +1617,7 @@
                 <div class="pos-domain-hero-main">
                   <div class="plan-hero-label">Facial exercises</div>
                   <div class="pos-domain-plan" id="pos-domain-facial-plan" data-importance="4">Plan: —</div>
-                  <div class="pos-domain-plan-sub" id="pos-domain-facial-plan-sub">Metrics → plan drivers below</div>
+                  <div class="pos-domain-plan-sub" id="pos-domain-facial-plan-sub">Inputs used below</div>
                 </div>
                 <div class="meta">Tracking source</div>
               </div>
@@ -6339,7 +6339,7 @@
         const { startIso, endIso } = dayBounds(dateKey);
 
         const nutritionRangeStart = rangeStartDate(7).toISOString();
-        const [planResp, metricsResp, readinessResp, stravaResp, strengthResp, nutritionResp, formResp] = await Promise.all([
+        const [planResp, metricsResp, readinessResp, settingsResp, stravaResp, strengthResp, nutritionResp, formResp] = await Promise.all([
           supabase
             .from("coach_plan_daily")
             .select("date,summary_text,plan_json,created_at")
@@ -6348,12 +6348,17 @@
             .limit(1),
           supabase
             .from("pos_day_metrics")
-            .select("sleep_seconds,sleep_baseline_7d,adherence_7d,training_load_7d")
+            .select("sleep_seconds,sleep_baseline_7d,adherence_7d,training_load_7d,workout_count_7d,endurance_sessions_7d,strength_sessions_7d,strength_time_s_7d,strength_capacity_7d")
             .order("date", { ascending: false })
             .limit(1),
           supabase
             .from("readiness_state")
             .select("sleep_updated_at")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("coach_settings")
+            .select("min_weekly_workouts")
             .eq("id", "global")
             .maybeSingle(),
           supabase
@@ -6386,11 +6391,14 @@
         const targets = plan?.plan_json?.nutrition_targets ?? {};
         const metrics = metricsResp.data?.[0] ?? {};
         const readiness = readinessResp.data ?? {};
+        const settings = settingsResp.data ?? {};
         const sleepHours = metrics.sleep_seconds ? metrics.sleep_seconds / 3600 : null;
         const sleepBaseline = metrics.sleep_baseline_7d ? metrics.sleep_baseline_7d / 3600 : null;
         const sleepDelta = sleepHours != null && sleepBaseline != null ? sleepHours - sleepBaseline : null;
         const sleepAge = formatAgeDays(readiness.sleep_updated_at);
         const formValue = formResp.data?.[0]?.form ?? null;
+        const sleepTarget = plan?.plan_json?.recovery_targets?.sleep_target_hours ?? null;
+        const minWeeklyWorkouts = Number(settings.min_weekly_workouts ?? 0) || null;
 
         let stravaMinutes = 0;
         let stravaDistance = 0;
@@ -6467,15 +6475,17 @@
           });
         };
 
-        let sleepPlanLine = "Plan: Log sleep";
+        let sleepPlanLine = "Plan: Set a sleep target";
         if (sleepHours != null) {
-          if (sleepBaseline != null) {
-            const deltaLabel = sleepDelta != null ? `Δ ${formatNumber(sleepDelta, 1)}h` : "Δ —";
-            sleepPlanLine = `Plan: ${formatNumber(sleepBaseline, 1)}h target (${deltaLabel})`;
-          } else {
-            sleepPlanLine = `Plan: ${formatNumber(sleepHours, 1)}h last night`;
-          }
-          if (sleepAge != null && sleepAge >= 2) sleepPlanLine += " · data stale";
+          const targetLabel = sleepTarget != null
+            ? `Target ${formatNumber(sleepTarget, 1)}h`
+            : sleepBaseline != null
+              ? `Target ${formatNumber(sleepBaseline, 1)}h`
+              : "Target —";
+          const lastLabel = `Last ${formatNumber(sleepHours, 1)}h`;
+          const baselineLabel = sleepBaseline != null ? `Baseline ${formatNumber(sleepBaseline, 1)}h` : "Baseline —";
+          sleepPlanLine = `Plan: ${targetLabel} · ${lastLabel} · ${baselineLabel}`;
+          if (sleepAge != null && sleepAge >= 2) sleepPlanLine += ` · Updated ${formatNumber(sleepAge, 1)}d ago`;
         }
         setPlanLine(posDomainSleepPlanEl, sleepPlanLine, { importance: 9, group: "plan_sleep", related: "sleep,baseline,delta" });
 
@@ -6483,8 +6493,8 @@
         if (targets.calories_target) dietTargets.push(`${formatNumber(targets.calories_target, 0)} kcal`);
         if (targets.protein_target_g) dietTargets.push(`${formatNumber(targets.protein_target_g, 0)}g protein`);
         const dietPlanLine = dietTargets.length
-          ? `Plan: ${dietTargets.join(" · ")}`
-          : `Plan: Set nutrition targets · coverage ${nutritionDaysDisplay}/7`;
+          ? `Plan: ${dietTargets.join(" · ")} · Logged ${formatNumber(todayNutritionCalories, 0) || 0} kcal`
+          : `Plan: Set nutrition targets · Logged ${formatNumber(todayNutritionCalories, 0) || 0} kcal`;
         setPlanLine(posDomainDietPlanEl, dietPlanLine, { importance: 9, group: "plan_diet", related: "calories,protein,coverage" });
 
         const stripReadinessText = (text) => {
@@ -6514,7 +6524,8 @@
           const cleaned = stripReadinessText(plan.summary_text);
           planText = cleaned.length > 140 ? `${cleaned.slice(0, 137)}…` : cleaned;
         }
-        const progressPlanLine = planText ? `Plan: ${planText}` : "Plan: No training prescription yet";
+        const windowLabel = rec?.window_start && rec?.window_end ? ` · Window ${rec.window_start}-${rec.window_end}` : "";
+        const progressPlanLine = planText ? `Plan: ${planText}${windowLabel}` : "Plan: No training prescription yet";
         setPlanLine(posDomainProgressPlanEl, progressPlanLine, { importance: 9, group: "plan_progress", related: "recommendation,intensity,duration" });
 
         const planLower = planText.toLowerCase();
@@ -6523,21 +6534,27 @@
         const hasRunningPlan = !!planText && /(run|jog|walk|tread)/.test(planLower);
         const hasSwimmingPlan = !!planText && /(swim|pool|open water)/.test(planLower);
 
-        const strengthPlanLine = hasStrengthPlan ? `Plan: ${planText}` : "Plan: Not scheduled";
+        const strengthPlanLine = hasStrengthPlan ? `Plan: ${planText}` : "Plan: Schedule strength session";
         setPlanLine(posDomainWeightPlanEl, strengthPlanLine, { importance: 8, group: "plan_strength", related: "strength,quality,volume" });
 
-        const cyclingPlanLine = hasCyclingPlan ? `Plan: ${planText}` : "Plan: Not scheduled";
+        const cyclingPlanLine = hasCyclingPlan ? `Plan: ${planText}` : "Plan: Schedule cycling session";
         setPlanLine(posDomainCyclingPlanEl, cyclingPlanLine, { importance: 7, group: "plan_cycling", related: "cycling,volume" });
 
-        const runningPlanLine = hasRunningPlan ? `Plan: ${planText}` : "Plan: Not scheduled";
+        const runningPlanLine = hasRunningPlan ? `Plan: ${planText}` : "Plan: Schedule run/walk session";
         setPlanLine(posDomainRunningPlanEl, runningPlanLine, { importance: 7, group: "plan_running", related: "running,volume" });
 
-        const swimmingPlanLine = hasSwimmingPlan ? `Plan: ${planText}` : "Plan: Not scheduled";
+        const swimmingPlanLine = hasSwimmingPlan ? `Plan: ${planText}` : "Plan: Schedule swim session";
         setPlanLine(posDomainSwimmingPlanEl, swimmingPlanLine, { importance: 7, group: "plan_swimming", related: "swimming,volume" });
 
         setPlanLine(posDomainFacialPlanEl, "Plan: Manual routine (not tracked)", { importance: 4, group: "plan_facial", related: "facial" });
 
         setMetrics(posDomainSleepMetricsEl, [
+          {
+            title: "Sleep target",
+            value: sleepTarget != null ? `${formatNumber(sleepTarget, 1)} h` : "—",
+            meta: sleepTarget != null ? "Target for tonight" : "Target missing",
+            metricMeta: { importance: 9, group: "sleep_metrics", related: "target" },
+          },
           {
             title: "Sleep last night",
             value: sleepHours != null ? `${formatNumber(sleepHours, 1)} h` : "—",
@@ -6555,13 +6572,13 @@
         setMetrics(posDomainDietMetricsEl, [
           {
             title: "Calories logged today",
-            value: todayNutritionCalories ? `${formatNumber(todayNutritionCalories, 0)} kcal` : "No logs",
+            value: `${formatNumber(todayNutritionCalories, 0) || 0} kcal`,
             meta: targets.calories_target ? `Target ${formatNumber(targets.calories_target, 0)} kcal` : "Target missing",
             metricMeta: { importance: 8, group: "diet_metrics", related: "calories,target" },
           },
           {
             title: "Protein logged today",
-            value: todayNutritionProtein ? `${formatNumber(todayNutritionProtein, 0)} g` : "No logs",
+            value: `${formatNumber(todayNutritionProtein, 0) || 0} g`,
             meta: targets.protein_target_g ? `Target ${formatNumber(targets.protein_target_g, 0)} g` : "Target missing",
             metricMeta: { importance: 8, group: "diet_metrics", related: "protein,target" },
           },
@@ -6583,10 +6600,16 @@
 
         setMetrics(posDomainProgressMetricsEl, [
           {
+            title: "Workouts (7d)",
+            value: metrics.workout_count_7d != null ? `${formatNumber(metrics.workout_count_7d, 0)} sessions` : "—",
+            meta: minWeeklyWorkouts ? `Goal ${minWeeklyWorkouts} sessions` : "Goal missing",
+            metricMeta: { importance: 9, group: "progress_metrics", related: "workouts,goal" },
+          },
+          {
             title: "Adherence (7d)",
             value: metrics.adherence_7d != null ? `${formatNumber(metrics.adherence_7d * 100, 0)}%` : "—",
             meta: "Planned vs completed",
-            metricMeta: { importance: 9, group: "progress_metrics", related: "adherence" },
+            metricMeta: { importance: 8, group: "progress_metrics", related: "adherence" },
           },
           {
             title: "Strava activities today",
@@ -6610,10 +6633,16 @@
 
         setMetrics(posDomainWeightMetricsEl, [
           {
-            title: "Strength sessions today",
-            value: `${strengthCount}`,
-            meta: strengthCount ? "Speediance sessions" : "No session logged",
+            title: "Strength sessions (7d)",
+            value: metrics.strength_sessions_7d != null ? `${formatNumber(metrics.strength_sessions_7d, 0)}` : "—",
+            meta: "Rolling 7d count",
             metricMeta: { importance: 8, group: "strength_metrics", related: "sessions" },
+          },
+          {
+            title: "Strength today",
+            value: `${strengthCount}`,
+            meta: strengthCount ? "Speediance sessions" : "No session logged today",
+            metricMeta: { importance: 7, group: "strength_metrics", related: "sessions_today" },
           },
           {
             title: "Avg quality",
