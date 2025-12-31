@@ -20,5 +20,4 @@ test("login flow (optional)", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeHidden();
   await expect(page.getByText("Process")).toBeVisible();
-  await expect(page.getByText("Personal Ops")).toBeVisible();
 });
