@@ -151,37 +151,45 @@
         display: grid;
         gap: 12px;
       }
-      .chip-row {
+      .stale-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
+        gap: 8px;
         align-items: center;
       }
-      .chip {
-        padding: 1px 5px;
+      .stale-chip {
+        display: inline-flex;
+        gap: 6px;
+        align-items: baseline;
+        padding: 6px 10px;
         border-radius: 999px;
-        font-size: 10px;
-        line-height: 1;
-        letter-spacing: 0.01em;
-        text-transform: none;
-        border: 1px solid rgba(148, 163, 184, 0.3);
+        font-size: 11px;
+        line-height: 1.1;
+        border: 1px solid rgba(148, 163, 184, 0.35);
         color: var(--muted);
         background: rgba(15, 23, 42, 0.6);
+        white-space: nowrap;
       }
-      .chip.good {
+      .stale-chip b { font-weight: 700; }
+      .stale-chip.good {
         border-color: rgba(52, 211, 153, 0.6);
         color: #86efac;
-        background: rgba(52, 211, 153, 0.12);
+        background: rgba(52, 211, 153, 0.14);
       }
-      .chip.warn {
+      .stale-chip.warn {
         border-color: rgba(248, 171, 111, 0.55);
         color: #fdba74;
-        background: rgba(249, 115, 22, 0.15);
+        background: rgba(249, 115, 22, 0.14);
       }
-      .chip.bad {
+      .stale-chip.bad {
         border-color: rgba(248, 113, 113, 0.55);
         color: #fda4af;
-        background: rgba(244, 63, 94, 0.15);
+        background: rgba(244, 63, 94, 0.14);
+      }
+      .stale-chip.neutral {
+        border-color: rgba(148, 163, 184, 0.45);
+        color: #e2e8f0;
+        background: rgba(148, 163, 184, 0.16);
       }
       .pos-summary-header {
         display: flex;
@@ -442,35 +450,6 @@
         background: rgba(249, 115, 22, 0.15);
       }
       .status-chip.bad {
-        border-color: rgba(248, 113, 113, 0.55);
-        color: #fda4af;
-        background: rgba(244, 63, 94, 0.15);
-      }
-      .confidence-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 2px 6px;
-        border-radius: 999px;
-        font-size: 9px;
-        line-height: 1;
-        letter-spacing: 0.02em;
-        text-transform: none;
-        border: 1px solid rgba(148, 163, 184, 0.4);
-        color: var(--muted);
-        background: rgba(15, 23, 42, 0.6);
-      }
-      .confidence-chip.good {
-        border-color: rgba(52, 211, 153, 0.5);
-        color: #86efac;
-        background: rgba(52, 211, 153, 0.12);
-      }
-      .confidence-chip.warn {
-        border-color: rgba(248, 171, 111, 0.55);
-        color: #fdba74;
-        background: rgba(249, 115, 22, 0.15);
-      }
-      .confidence-chip.bad {
         border-color: rgba(248, 113, 113, 0.55);
         color: #fda4af;
         background: rgba(244, 63, 94, 0.15);
@@ -1108,8 +1087,7 @@
               <div id="pos-summary" class="pos-summary hidden" data-importance="10" data-group="summary" data-related="sleep,adherence,workouts,load,race">
                 <div id="pos-summary-metrics" class="kpi-grid"></div>
                 <div class="meta" id="pos-summary-note"></div>
-                <div id="pos-summary-drivers" class="chip-row"></div>
-                <div id="pos-summary-confidence" class="confidence-chip"></div>
+                <div id="pos-summary-drivers" class="stale-row"></div>
               </div>
             </div>
           </div>
@@ -1462,7 +1440,6 @@
       const posSummaryFreshnessEl = document.getElementById("pos-summary-freshness");
       const posSummaryNoteEl = document.getElementById("pos-summary-note");
       const posSummaryDriversEl = document.getElementById("pos-summary-drivers");
-      const posSummaryConfidenceEl = document.getElementById("pos-summary-confidence");
       const posDomainSleepPlanEl = document.getElementById("pos-domain-sleep-plan");
       const posDomainDietPlanEl = document.getElementById("pos-domain-diet-plan");
       const posDomainProgressPlanEl = document.getElementById("pos-domain-progress-plan");
@@ -2164,18 +2141,17 @@
             });
           }
           drivers.slice(0, 4).forEach((driver) => {
-            const chip = document.createElement("div");
-            chip.className = `chip ${driver.tone}`;
-            chip.textContent = driver.label;
+            const chip = document.createElement("span");
+            chip.className = `stale-chip ${driver.tone}`;
+            chip.innerHTML = driver.label.replace(/(\d+(?:\.\d+)?(?:%|d|h)?)/g, "<b>$1</b>");
             attachMeta(chip, driver.meta);
             posSummaryDriversEl.appendChild(chip);
           });
-        }
-
-        if (posSummaryConfidenceEl) {
-          posSummaryConfidenceEl.className = `confidence-chip ${confidenceTone}`;
-          posSummaryConfidenceEl.textContent = `${confidenceLabel} · ${confidence}%`;
-          attachMeta(posSummaryConfidenceEl, { importance: 9, group: "confidence", related: "coverage,stale" });
+          const confidenceChip = document.createElement("span");
+          confidenceChip.className = `stale-chip ${confidenceTone || "neutral"}`;
+          confidenceChip.innerHTML = `Confidence <b>${confidence}%</b>`;
+          attachMeta(confidenceChip, { importance: 9, group: "confidence", related: "coverage,stale" });
+          posSummaryDriversEl.appendChild(confidenceChip);
         }
 
         if (posRunStatusEl) {
