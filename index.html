@@ -216,6 +216,86 @@
       .pos-body.pos-domains {
         grid-template-columns: 1fr;
       }
+      .pos-report {
+        display: grid;
+        gap: 18px;
+      }
+      .pos-report-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border: 1px solid rgba(30, 41, 59, 0.6);
+        border-radius: 16px;
+        background: rgba(9, 13, 26, 0.78);
+      }
+      .pos-report-title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .report-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        color: var(--text);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        background: rgba(15, 23, 42, 0.65);
+      }
+      .pos-report-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .report-card {
+        border: 1px solid rgba(30, 41, 59, 0.6);
+        border-radius: 16px;
+        padding: 16px;
+        background: rgba(10, 14, 28, 0.76);
+        display: grid;
+        gap: 10px;
+      }
+      .report-card-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+      .report-assessment {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e5e7f8;
+      }
+      .report-action {
+        font-size: 13px;
+        color: var(--text);
+      }
+      .report-metrics {
+        display: grid;
+        gap: 6px;
+        font-size: 12px;
+      }
+      .report-metric-row {
+        display: grid;
+        grid-template-columns: 1.2fr 0.9fr 1fr 0.6fr 1fr;
+        gap: 8px;
+        padding: 6px 0;
+        border-top: 1px solid rgba(30, 41, 59, 0.5);
+      }
+      .report-metric-row:first-child {
+        border-top: none;
+      }
+      .report-metric-name {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .report-metric-cell {
+        color: var(--muted);
+      }
       .pos-domains {
         display: grid;
         gap: 22px;
@@ -1248,6 +1328,47 @@
           <div class="meta" id="data-status"></div>
         </div>
         <div id="pos-dashboard" class="pos-layout hidden" data-importance="10" data-group="personal_ops">
+          <div id="pos-report" class="pos-report">
+            <div class="pos-report-header">
+              <div>
+                <div class="pos-report-title">Personal Ops — Operational Report</div>
+                <div id="pos-report-updated" class="meta">Updated —</div>
+              </div>
+              <div id="pos-report-coverage" class="report-chip">Coverage —</div>
+            </div>
+            <div class="pos-report-grid">
+              <section id="report-training" class="report-card" data-importance="10" data-group="report_training" data-related="workouts,load,form">
+                <div class="report-card-title">Training / Exercise</div>
+                <div id="report-training-assessment" class="report-assessment">—</div>
+                <div id="report-training-action" class="report-action">—</div>
+                <div id="report-training-metrics" class="report-metrics"></div>
+              </section>
+              <section id="report-sleep" class="report-card" data-importance="10" data-group="report_sleep" data-related="sleep,baseline,stale">
+                <div class="report-card-title">Sleep</div>
+                <div id="report-sleep-assessment" class="report-assessment">—</div>
+                <div id="report-sleep-action" class="report-action">—</div>
+                <div id="report-sleep-metrics" class="report-metrics"></div>
+              </section>
+              <section id="report-nutrition" class="report-card" data-importance="9" data-group="report_nutrition" data-related="calories,protein,coverage">
+                <div class="report-card-title">Nutrition</div>
+                <div id="report-nutrition-assessment" class="report-assessment">—</div>
+                <div id="report-nutrition-action" class="report-action">—</div>
+                <div id="report-nutrition-metrics" class="report-metrics"></div>
+              </section>
+              <section id="report-body" class="report-card" data-importance="8" data-group="report_body" data-related="weight,recovery">
+                <div class="report-card-title">Body composition / recovery</div>
+                <div id="report-body-assessment" class="report-assessment">—</div>
+                <div id="report-body-action" class="report-action">—</div>
+                <div id="report-body-metrics" class="report-metrics"></div>
+              </section>
+              <section id="report-risk" class="report-card" data-importance="8" data-group="report_risk" data-related="form,stale,coverage">
+                <div class="report-card-title">Readiness / risk</div>
+                <div id="report-risk-assessment" class="report-assessment">—</div>
+                <div id="report-risk-action" class="report-action">—</div>
+                <div id="report-risk-metrics" class="report-metrics"></div>
+              </section>
+            </div>
+          </div>
           <div class="pos-hero">
             <div class="pos-summary-header">
               <div style="font-weight:600;">Personal Ops · Today</div>
@@ -1706,6 +1827,23 @@
       const posSummaryFreshnessEl = document.getElementById("pos-summary-freshness");
       const posSummaryNoteEl = document.getElementById("pos-summary-note");
       const posSummaryDriversEl = document.getElementById("pos-summary-drivers");
+      const posReportUpdatedEl = document.getElementById("pos-report-updated");
+      const posReportCoverageEl = document.getElementById("pos-report-coverage");
+      const reportTrainingAssessmentEl = document.getElementById("report-training-assessment");
+      const reportTrainingActionEl = document.getElementById("report-training-action");
+      const reportTrainingMetricsEl = document.getElementById("report-training-metrics");
+      const reportSleepAssessmentEl = document.getElementById("report-sleep-assessment");
+      const reportSleepActionEl = document.getElementById("report-sleep-action");
+      const reportSleepMetricsEl = document.getElementById("report-sleep-metrics");
+      const reportNutritionAssessmentEl = document.getElementById("report-nutrition-assessment");
+      const reportNutritionActionEl = document.getElementById("report-nutrition-action");
+      const reportNutritionMetricsEl = document.getElementById("report-nutrition-metrics");
+      const reportBodyAssessmentEl = document.getElementById("report-body-assessment");
+      const reportBodyActionEl = document.getElementById("report-body-action");
+      const reportBodyMetricsEl = document.getElementById("report-body-metrics");
+      const reportRiskAssessmentEl = document.getElementById("report-risk-assessment");
+      const reportRiskActionEl = document.getElementById("report-risk-action");
+      const reportRiskMetricsEl = document.getElementById("report-risk-metrics");
       const posDomainSleepMetricsEl = document.getElementById("pos-domain-sleep-metrics");
       const posDomainDietMetricsEl = document.getElementById("pos-domain-diet-metrics");
       const posDomainProgressMetricsEl = document.getElementById("pos-domain-progress-metrics");
@@ -4945,38 +5083,13 @@
         });
       }
 
+      if (posDashboardEl) {
+        const legacyNodes = posDashboardEl.querySelectorAll(".pos-hero, .pos-domains, .pos-body");
+        legacyNodes.forEach((node) => node.classList.add("hidden"));
+      }
+
       async function loadPosViewData(viewId) {
-        await loadPosSummary();
-        await loadPosPlan();
-        await loadPosRaceReadiness();
-        await loadPosHeatmap();
-        await loadPosStravaFitness();
-        await loadPosLoadCapacity();
-        await loadPosWeeklyLoad();
-        await loadPosRelations();
-        await loadPosTrends();
-        await loadPosRecovery();
-        await loadPosDataHealth();
-        await loadPosNutrition();
-        await loadPosSleepTrend();
-        await loadPosSleepPlan();
-        await loadPosStats();
-        await loadPosFacial();
-        await loadPosTrainingWeek();
-        await loadPosFitnessCard();
-        await loadPosStreakCalendar();
-        await loadPosPowerSkills();
-        await loadPosAppleHealth();
-        await loadPosStrengthScatter();
-        await loadPosBaselines();
-        await loadPosStrengthMatrix();
-        await loadPosQuality();
-        await loadPosLastSession();
-        await loadPosQualityTrends();
-        await loadPosWeakness();
-        await loadPosSleepQuality();
-        await loadPosSleepScoreGrid();
-        await loadPosSleepHeartRate();
+        await loadPosReport();
       }
 
       function attachMeta(el, meta) {
@@ -6703,6 +6816,307 @@
             value: "Not connected",
             meta: "Manual routine only",
             metricMeta: { importance: 4, group: "facial_metrics", related: "facial" },
+          },
+        ]);
+      }
+
+      function renderReportMetrics(targetEl, metrics) {
+        if (!targetEl) return;
+        targetEl.innerHTML = "";
+        metrics.forEach((metric) => {
+          const row = document.createElement("div");
+          row.className = "report-metric-row";
+          row.innerHTML = `
+            <div class="report-metric-name">${metric.name}</div>
+            <div class="report-metric-cell">${metric.current}</div>
+            <div class="report-metric-cell">${metric.target}</div>
+            <div class="report-metric-cell">${metric.window}</div>
+            <div class="report-metric-cell">${metric.direction}</div>
+          `;
+          targetEl.appendChild(row);
+        });
+      }
+
+      async function loadPosReport() {
+        const dateKey = localDateKey();
+        const { startIso, endIso } = dayBounds(dateKey);
+        const nutritionRangeStart = rangeStartDate(7).toISOString();
+
+        const [
+          planResp,
+          metricsResp,
+          readinessResp,
+          settingsResp,
+          stravaResp,
+          nutritionResp,
+          formResp,
+        ] = await Promise.all([
+          supabase
+            .from("coach_plan_daily")
+            .select("date,summary_text,plan_json,created_at")
+            .lte("date", dateKey)
+            .order("date", { ascending: false })
+            .limit(1),
+          supabase
+            .from("pos_day_metrics")
+            .select("sleep_seconds,sleep_baseline_7d,adherence_7d,training_load_7d,workout_count_7d,endurance_sessions_7d,strength_sessions_7d,weight_kg,weight_baseline_7d")
+            .order("date", { ascending: false })
+            .limit(1),
+          supabase
+            .from("readiness_state")
+            .select("sleep_updated_at,weight_updated_at")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("coach_settings")
+            .select("min_weekly_workouts")
+            .eq("id", "global")
+            .maybeSingle(),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "strava")
+            .eq("event_type", "activity")
+            .gte("event_timestamp", startIso)
+            .lte("event_timestamp", endIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "nutrition")
+            .gte("event_timestamp", nutritionRangeStart),
+          supabase
+            .from("strava_fitness_daily")
+            .select("form")
+            .eq("sport_type", "all")
+            .order("date", { ascending: false })
+            .limit(1),
+        ]);
+
+        const plan = planResp.data?.[0] ?? null;
+        const planJson = plan?.plan_json ?? {};
+        const rec = planJson.recommendation ?? {};
+        const targets = planJson.nutrition_targets ?? {};
+        const sleepTarget = planJson.recovery_targets?.sleep_target_hours ?? null;
+        const metrics = metricsResp.data?.[0] ?? {};
+        const readiness = readinessResp.data ?? {};
+        const settings = settingsResp.data ?? {};
+        const formValue = formResp.data?.[0]?.form ?? null;
+
+        const updatedAt = plan?.created_at ?? metrics.updated_at ?? readiness.updated_at ?? null;
+        if (posReportUpdatedEl) {
+          posReportUpdatedEl.textContent = updatedAt ? `Updated ${formatTimestamp(updatedAt)}` : "Updated —";
+        }
+
+        const sleepAge = formatAgeDays(readiness.sleep_updated_at);
+        const weightAge = formatAgeDays(readiness.weight_updated_at);
+        const coverageLabel = [
+          sleepAge != null ? `Sleep ${formatNumber(sleepAge, 1)}d` : "Sleep —",
+          weightAge != null ? `Weight ${formatNumber(weightAge, 1)}d` : "Weight —",
+        ].join(" · ");
+        if (posReportCoverageEl) {
+          posReportCoverageEl.textContent = `Coverage: ${coverageLabel}`;
+        }
+
+        const sleepHours = metrics.sleep_seconds ? metrics.sleep_seconds / 3600 : null;
+        const sleepBaseline = metrics.sleep_baseline_7d ? metrics.sleep_baseline_7d / 3600 : null;
+        const sleepDelta = sleepHours != null && sleepBaseline != null ? sleepHours - sleepBaseline : null;
+
+        let todayCalories = 0;
+        let todayProtein = 0;
+        const nutritionDays = new Set();
+        (nutritionResp.data || []).forEach((row) => {
+          const key = dateKeyFromIso(row.event_timestamp);
+          if (key) nutritionDays.add(key);
+          if (key === dateKey) {
+            const payload = row.payload || {};
+            const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? payload.value1 ?? 0);
+            const protein = Number(payload.protein_g ?? payload.protein ?? 0);
+            if (!Number.isNaN(calories) && calories > 0) todayCalories += calories;
+            if (!Number.isNaN(protein) && protein > 0) todayProtein += protein;
+          }
+        });
+        const nutritionDaysCount = nutritionDays.size;
+        const nutritionDaysDisplay = Math.min(nutritionDaysCount, 7);
+
+        const workoutGoal = Number(settings.min_weekly_workouts ?? 0) || null;
+        const workoutCount = metrics.workout_count_7d ?? null;
+        const trainingLoad7d = metrics.training_load_7d ?? null;
+        const enduranceSessions = metrics.endurance_sessions_7d ?? null;
+        const strengthSessions = metrics.strength_sessions_7d ?? null;
+
+        const planPieces = [];
+        const optionName =
+          rec?.workout_options?.[0]?.name ??
+          rec?.workout_option?.name ??
+          rec?.workout_name ??
+          rec?.name ??
+          "";
+        if (optionName) planPieces.push(optionName);
+        if (rec?.type) planPieces.push(rec.type);
+        if (rec?.duration_min) planPieces.push(`${rec.duration_min} min`);
+        if (rec?.intensity) planPieces.push(`${rec.intensity} intensity`);
+        const windowLabel = rec?.window_start && rec?.window_end ? `Window ${rec.window_start}-${rec.window_end}` : "Window —";
+        const planText = planPieces.length ? planPieces.join(" · ") : "No training prescription";
+
+        if (reportTrainingAssessmentEl) {
+          reportTrainingAssessmentEl.textContent = workoutCount != null && workoutGoal
+            ? `Workouts 7d: ${workoutCount} vs goal ${workoutGoal}. Load 7d: ${trainingLoad7d ?? "—"}.`
+            : `Workouts 7d: ${workoutCount ?? "—"}. Load 7d: ${trainingLoad7d ?? "—"}.`;
+        }
+        if (reportTrainingActionEl) {
+          reportTrainingActionEl.textContent = `Next: ${planText} · ${windowLabel}`;
+        }
+        renderReportMetrics(reportTrainingMetricsEl, [
+          {
+            name: "Workouts (7d)",
+            current: workoutCount != null ? `${workoutCount} sessions` : "—",
+            target: workoutGoal ? `Goal ${workoutGoal} sessions` : "Target —",
+            window: "7d",
+            direction: "Higher until goal",
+          },
+          {
+            name: "Training load (7d)",
+            current: trainingLoad7d != null ? `${formatNumber(trainingLoad7d, 0)}` : "—",
+            target: "Target —",
+            window: "7d",
+            direction: "Higher = more stress",
+          },
+          {
+            name: "Endurance sessions (7d)",
+            current: enduranceSessions != null ? `${enduranceSessions}` : "—",
+            target: "Target —",
+            window: "7d",
+            direction: "Higher until goal",
+          },
+          {
+            name: "Strength sessions (7d)",
+            current: strengthSessions != null ? `${strengthSessions}` : "—",
+            target: "Target —",
+            window: "7d",
+            direction: "Higher until goal",
+          },
+        ]);
+
+        if (reportSleepAssessmentEl) {
+          const deltaLabel = sleepDelta != null ? `${formatNumber(sleepDelta, 1)}h` : "—";
+          reportSleepAssessmentEl.textContent = `Sleep last night ${sleepHours != null ? formatNumber(sleepHours, 1) : "—"}h vs target ${sleepTarget != null ? formatNumber(sleepTarget, 1) : "—"}h (Δ ${deltaLabel}).`;
+        }
+        if (reportSleepActionEl) {
+          reportSleepActionEl.textContent = sleepTarget != null
+            ? `Target ${formatNumber(sleepTarget, 1)}h tonight.`
+            : "Set a sleep target for tonight.";
+        }
+        renderReportMetrics(reportSleepMetricsEl, [
+          {
+            name: "Sleep last night",
+            current: sleepHours != null ? `${formatNumber(sleepHours, 1)} h` : "—",
+            target: sleepTarget != null ? `${formatNumber(sleepTarget, 1)} h` : "Target —",
+            window: "last night",
+            direction: "Higher toward target",
+          },
+          {
+            name: "Sleep baseline (7d)",
+            current: sleepBaseline != null ? `${formatNumber(sleepBaseline, 1)} h` : "—",
+            target: "Target —",
+            window: "7d",
+            direction: "Higher = more recovery",
+          },
+          {
+            name: "Sleep updated",
+            current: sleepAge != null ? `${formatNumber(sleepAge, 1)} d ago` : "—",
+            target: "<2 d",
+            window: "recency",
+            direction: "Lower = fresher",
+          },
+        ]);
+
+        if (reportNutritionAssessmentEl) {
+          reportNutritionAssessmentEl.textContent = `Logged ${formatNumber(todayCalories, 0) || 0} kcal and ${formatNumber(todayProtein, 0) || 0} g protein today. Coverage ${nutritionDaysDisplay}/7 days.`;
+        }
+        if (reportNutritionActionEl) {
+          const calorieTarget = targets.calories_target ? formatNumber(targets.calories_target, 0) : "—";
+          const proteinTarget = targets.protein_target_g ? formatNumber(targets.protein_target_g, 0) : "—";
+          reportNutritionActionEl.textContent = `Hit targets: ${calorieTarget} kcal · ${proteinTarget} g protein.`;
+        }
+        renderReportMetrics(reportNutritionMetricsEl, [
+          {
+            name: "Calories logged today",
+            current: `${formatNumber(todayCalories, 0) || 0} kcal`,
+            target: targets.calories_target ? `${formatNumber(targets.calories_target, 0)} kcal` : "Target —",
+            window: "today",
+            direction: "Higher until target",
+          },
+          {
+            name: "Protein logged today",
+            current: `${formatNumber(todayProtein, 0) || 0} g`,
+            target: targets.protein_target_g ? `${formatNumber(targets.protein_target_g, 0)} g` : "Target —",
+            window: "today",
+            direction: "Higher until target",
+          },
+          {
+            name: "Nutrition coverage",
+            current: `${nutritionDaysDisplay}/7 days`,
+            target: "7/7 days",
+            window: "7d",
+            direction: "Higher = more confidence",
+          },
+        ]);
+
+        const weightKg = metrics.weight_kg ?? null;
+        const weightBaseline = metrics.weight_baseline_7d ?? null;
+        const weightDelta = weightKg != null && weightBaseline != null ? weightKg - weightBaseline : null;
+        if (reportBodyAssessmentEl) {
+          reportBodyAssessmentEl.textContent = `Weight ${weightKg != null ? formatNumber(weightKg, 1) : "—"} kg (Δ ${weightDelta != null ? formatNumber(weightDelta, 2) : "—"} kg).`;
+        }
+        if (reportBodyActionEl) {
+          reportBodyActionEl.textContent = weightAge != null && weightAge >= 7
+            ? "Update weight to refresh recovery signals."
+            : "Maintain weight trend unless goal changes.";
+        }
+        renderReportMetrics(reportBodyMetricsEl, [
+          {
+            name: "Weight",
+            current: weightKg != null ? `${formatNumber(weightKg, 1)} kg` : "—",
+            target: weightBaseline != null ? `${formatNumber(weightBaseline, 1)} kg baseline` : "Baseline —",
+            window: "latest",
+            direction: "Goal dependent",
+          },
+          {
+            name: "Weight updated",
+            current: weightAge != null ? `${formatNumber(weightAge, 1)} d ago` : "—",
+            target: "<7 d",
+            window: "recency",
+            direction: "Lower = fresher",
+          },
+        ]);
+
+        if (reportRiskAssessmentEl) {
+          reportRiskAssessmentEl.textContent = `Form ${formValue != null ? formatNumber(formValue, 0) : "—"} (Strava). Data gaps: sleep ${sleepAge != null ? formatNumber(sleepAge, 1) : "—"}d, weight ${weightAge != null ? formatNumber(weightAge, 1) : "—"}d.`;
+        }
+        if (reportRiskActionEl) {
+          reportRiskActionEl.textContent = "If form < -10 or sleep delta < -1h, avoid intensity.";
+        }
+        renderReportMetrics(reportRiskMetricsEl, [
+          {
+            name: "Form (Strava)",
+            current: formValue != null ? formatNumber(formValue, 0) : "—",
+            target: "-10 to +10",
+            window: "latest",
+            direction: "Higher = fresher",
+          },
+          {
+            name: "Sleep delta",
+            current: sleepDelta != null ? `${formatNumber(sleepDelta, 1)} h` : "—",
+            target: "≥ 0 h",
+            window: "last night",
+            direction: "Higher = better recovered",
+          },
+          {
+            name: "Data freshness",
+            current: `Sleep ${sleepAge != null ? formatNumber(sleepAge, 1) : "—"}d · Weight ${weightAge != null ? formatNumber(weightAge, 1) : "—"}d`,
+            target: "Sleep <2d · Weight <7d",
+            window: "recency",
+            direction: "Lower = fresher",
           },
         ]);
       }
