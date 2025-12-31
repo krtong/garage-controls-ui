@@ -4267,7 +4267,7 @@
       function renderGoalBar({ label, actual, target, unit, meta = null }) {
         const ratio = target ? actual / target : 0;
         const percent = Math.round(ratio * 100);
-        const status = ratio >= 1.1 ? "High" : ratio >= 0.9 ? "On target" : ratio >= 0.6 ? "Low" : "Very low";
+        const status = ratio >= 1.1 ? "≥110% target" : ratio >= 0.9 ? "90–110% target" : ratio >= 0.6 ? "60–90% target" : "<60% target";
         const tone = ratio >= 0.9 && ratio <= 1.1 ? "good" : ratio >= 0.6 ? "warn" : "bad";
         const metaText = `${formatNumber(actual, 1)} ${unit} / ${formatNumber(target, 0)} ${unit} (${percent}%)`;
 
@@ -4304,7 +4304,7 @@
         const safeActual = Number(actual ?? 0);
         const ratio = safeTarget > 0 ? safeActual / safeTarget : 0;
         const percent = Math.round(ratio * 100);
-        const status = ratio >= 1.1 ? "High" : ratio >= 0.9 ? "On target" : ratio >= 0.6 ? "Low" : "Very low";
+        const status = ratio >= 1.1 ? "≥110% target" : ratio >= 0.9 ? "90–110% target" : ratio >= 0.6 ? "60–90% target" : "<60% target";
         const tone = ratio >= 0.9 && ratio <= 1.1 ? "good" : ratio >= 0.6 ? "warn" : "bad";
         const decimals = unit === "kcal" ? 0 : 1;
         const metaText = `Avg (logged days) ${formatNumber(safeActual, decimals)} ${unit} · Target ${formatNumber(safeTarget, 0)} ${unit} (${Number.isFinite(percent) ? percent : 0}%)`;
@@ -4537,42 +4537,42 @@
       }
 
       function frequencyBand(count) {
-        if (count >= 2) return { label: "Meets target", tone: "good", percent: 90 };
-        if (count === 1) return { label: "Below target", tone: "warn", percent: 55 };
-        return { label: "Missing", tone: "bad", percent: 15 };
+        if (count >= 2) return { label: "≥2 sessions", tone: "good", percent: 90 };
+        if (count === 1) return { label: "1 session", tone: "warn", percent: 55 };
+        return { label: "0 sessions", tone: "bad", percent: 15 };
       }
 
       function durationBand(minutes) {
-        if (!minutes) return { label: "None", tone: "bad", percent: 10 };
-        if (minutes <= 20) return { label: "Short", tone: "warn", percent: 40 };
-        if (minutes <= 45) return { label: "Medium", tone: "good", percent: 65 };
-        if (minutes <= 75) return { label: "Long", tone: "good", percent: 85 };
-        return { label: "Extended", tone: "good", percent: 95 };
+        if (!minutes) return { label: "0 min", tone: "bad", percent: 10 };
+        if (minutes <= 20) return { label: "≤20 min", tone: "warn", percent: 40 };
+        if (minutes <= 45) return { label: "21–45 min", tone: "good", percent: 65 };
+        if (minutes <= 75) return { label: "46–75 min", tone: "good", percent: 85 };
+        return { label: "≥76 min", tone: "good", percent: 95 };
       }
 
       function loadBand(value) {
         if (!value || Number.isNaN(value)) return { label: "Missing", tone: "bad", percent: 10 };
-        if (value < 5000) return { label: "Light", tone: "warn", percent: 40 };
-        if (value < 15000) return { label: "Moderate", tone: "good", percent: 70 };
-        return { label: "High", tone: "good", percent: 90 };
+        if (value < 5000) return { label: "<5000 load", tone: "warn", percent: 40 };
+        if (value < 15000) return { label: "5000–14999 load", tone: "good", percent: 70 };
+        return { label: "≥15000 load", tone: "good", percent: 90 };
       }
 
       function qualityBand(value) {
         if (value === null || value === undefined || Number.isNaN(value)) {
           return { label: "Unknown", tone: "warn" };
         }
-        if (value >= 70) return { label: "Strong quality", tone: "good" };
-        if (value >= 45) return { label: "Needs polish", tone: "warn" };
-        return { label: "Technique focus", tone: "bad" };
+        if (value >= 70) return { label: "≥70 score", tone: "good" };
+        if (value >= 45) return { label: "45–69 score", tone: "warn" };
+        return { label: "<45 score", tone: "bad" };
       }
 
       function formBand(value) {
         if (value === null || value === undefined || Number.isNaN(value)) {
           return { label: "Unknown", tone: "warn" };
         }
-        if (value >= 8) return { label: "Form high", tone: "good" };
-        if (value >= -4) return { label: "Form neutral", tone: "warn" };
-        return { label: "Form low", tone: "bad" };
+        if (value >= 8) return { label: "≥8 form", tone: "good" };
+        if (value >= -4) return { label: "-4 to 7 form", tone: "warn" };
+        return { label: "<-4 form", tone: "bad" };
       }
 
       function renderSparkline(values, color = "rgba(56,189,248,0.9)") {
@@ -5059,10 +5059,10 @@
         const legend = document.createElement("div");
         legend.className = "goal-legend";
         legend.innerHTML = `
-          <span><span class="legend-dot bad"></span>Very low (&lt;60%)</span>
-          <span><span class="legend-dot warn"></span>Low (60–90%)</span>
-          <span><span class="legend-dot good"></span>On target (90–110%)</span>
-          <span><span class="legend-dot warn"></span>High (&gt;110%)</span>
+          <span><span class="legend-dot bad"></span>&lt;60% of target</span>
+          <span><span class="legend-dot warn"></span>60–90% of target</span>
+          <span><span class="legend-dot good"></span>90–110% of target</span>
+          <span><span class="legend-dot warn"></span>&gt;110% of target</span>
         `;
         posNutritionListEl.appendChild(legend);
       }
@@ -5089,7 +5089,7 @@
           const ratio = maxWatts ? (row.max_watts || 0) / maxWatts : 0;
           const percent = ratio * 100;
           const tone = ratio > 0.75 ? "good" : ratio > 0.4 ? "warn" : "bad";
-          const status = ratio > 0.75 ? "High power" : ratio > 0.4 ? "Moderate" : "Develop";
+          const status = ratio > 0.75 ? "≥75% of best" : ratio > 0.4 ? "40–75% of best" : "<40% of best";
           const meta = row.max_watts ? `${formatNumber(row.max_watts, 0)} W (${formatNumber(percent, 0)}% of best)` : "No watts";
           const item = renderStatusItem(name, status, tone, meta, { importance: 6, group: "strength_baseline", related: "max_watts,max_weight,one_rm" });
           item.appendChild(renderThresholdBar(percent));
