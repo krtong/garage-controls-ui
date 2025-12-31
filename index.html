@@ -1898,7 +1898,6 @@
       async function loadPosSummary() {
         if (!posSummaryMetricsEl || !posSummaryEl) return;
         if (posSummaryNoteEl) posSummaryNoteEl.textContent = "";
-        if (posSummaryConfidenceEl) posSummaryConfidenceEl.textContent = "";
         posSummaryMetricsEl.innerHTML = "";
 
         const trainingReq = supabase
