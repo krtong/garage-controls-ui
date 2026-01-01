@@ -1,0 +1,1438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Automation Control Panel</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0f1f;
+        --panel: #141b2f;
+        --panel-2: #111725;
+        --border: #2a3352;
+        --text: #e8ecf7;
+        --muted: #9aa3bd;
+        --accent: #38bdf8;
+        --accent-2: #22d3ee;
+        --danger: #f87171;
+        --success: #34d399;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: radial-gradient(circle at 20% 20%, #1a2547 0%, #0a0f1f 45%, #070b16 100%);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 780px;
+        margin: 0 auto;
+        background: linear-gradient(160deg, rgba(20,27,47,0.95), rgba(12,16,32,0.98));
+        border-radius: 20px;
+        padding: 20px;
+        border: 1px solid rgba(42, 51, 82, 0.7);
+        box-shadow: 0 24px 60px rgba(5, 8, 20, 0.6);
+      }
+      h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.2px; }
+      h2 { margin: 18px 0 8px; font-size: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; }
+      .row { margin: 14px 0; }
+      label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: var(--muted); }
+      input[type="email"], input[type="password"], input[type="number"], input[type="text"], select {
+        width: 100%;
+        padding: 14px 14px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--panel-2);
+        color: var(--text);
+        font-size: 16px;
+      }
+      input:focus, select:focus {
+        outline: 2px solid rgba(56, 189, 248, 0.6);
+        border-color: transparent;
+      }
+      button {
+        padding: 14px 18px;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+        color: #02131f;
+        font-weight: 700;
+        font-size: 16px;
+        min-height: 48px;
+      }
+      button.secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      button.danger {
+        background: transparent;
+        border: 1px solid rgba(248, 113, 113, 0.6);
+        color: var(--danger);
+      }
+      .hidden { display: none !important; }
+      .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+      .status {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(17, 23, 37, 0.7);
+        border: 1px solid rgba(42, 51, 82, 0.7);
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+      .topbar { display: flex; flex-direction: column; gap: 10px; }
+      .switch {
+        position: relative;
+        width: 56px;
+        height: 32px;
+        display: inline-block;
+      }
+      .switch input { opacity: 0; width: 0; height: 0; }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #2b334f;
+        border-radius: 999px;
+        transition: .2s ease;
+        border: 1px solid var(--border);
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 24px;
+        width: 24px;
+        left: 4px;
+        bottom: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: .2s ease;
+      }
+      input:checked + .slider { background: rgba(52, 211, 153, 0.6); border-color: rgba(52, 211, 153, 0.7); }
+      input:checked + .slider:before { transform: translateX(24px); }
+      .grid { display: grid; gap: 12px; }
+      .card {
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        border-radius: 16px;
+        padding: 14px;
+        background: rgba(10, 15, 31, 0.6);
+      }
+      .row-inline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .process-tabs {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        overflow-x: visible;
+        padding-bottom: 2px;
+      }
+      .process-tab {
+        flex: 0 0 auto;
+        padding: 12px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(10, 15, 31, 0.4);
+        color: var(--text);
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .process-tab.active {
+        background: linear-gradient(135deg, rgba(14, 165, 233, 0.7), rgba(34, 211, 238, 0.7));
+        color: #03121f;
+        border-color: transparent;
+      }
+      .segmented {
+        display: inline-flex;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+      .segmented button {
+        border-radius: 0;
+        border: none;
+        background: transparent;
+        color: var(--text);
+        padding: 10px 14px;
+        font-size: 14px;
+        min-height: 40px;
+      }
+      .segmented button.active {
+        background: rgba(34, 211, 238, 0.2);
+        color: var(--accent-2);
+      }
+      .list {
+        display: grid;
+        gap: 10px;
+      }
+      .state-grid {
+        display: grid;
+        gap: 12px;
+      }
+      @media (min-width: 680px) {
+        .state-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      .state-card {
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.7);
+        display: grid;
+        gap: 10px;
+      }
+      .state-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .state-door {
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .state-badge {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+      }
+      .state-badge.open {
+        background: rgba(248, 113, 113, 0.16);
+        border-color: rgba(248, 113, 113, 0.45);
+        color: #fca5a5;
+      }
+      .state-badge.closed {
+        background: rgba(52, 211, 153, 0.16);
+        border-color: rgba(52, 211, 153, 0.45);
+        color: #86efac;
+      }
+      .state-badge.unknown {
+        background: rgba(148, 163, 184, 0.16);
+        border-color: rgba(148, 163, 184, 0.3);
+        color: var(--muted);
+      }
+      .state-metrics {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .state-metric {
+        background: rgba(12, 18, 34, 0.7);
+        border: 1px solid rgba(42, 51, 82, 0.5);
+        border-radius: 12px;
+        padding: 8px 10px;
+      }
+      .state-metric span {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+      .state-metric strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .state-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .state-actions button {
+        padding: 10px 14px;
+        font-size: 13px;
+        min-height: 40px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        color: var(--muted);
+        background: rgba(12, 18, 34, 0.7);
+      }
+      .pill.overdue {
+        border-color: rgba(248, 113, 113, 0.6);
+        color: #fca5a5;
+        background: rgba(248, 113, 113, 0.12);
+      }
+      .pill.soon {
+        border-color: rgba(251, 191, 36, 0.5);
+        color: #fde68a;
+        background: rgba(251, 191, 36, 0.12);
+      }
+      .pill.ontrack {
+        border-color: rgba(52, 211, 153, 0.45);
+        color: #86efac;
+        background: rgba(52, 211, 153, 0.12);
+      }
+      .warning {
+        color: #fca5a5;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .list-item {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(42, 51, 82, 0.6);
+        background: rgba(9, 13, 26, 0.6);
+      }
+      .list-row {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 1fr;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .list-row strong {
+        display: block;
+        color: var(--text);
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .list-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .list-meta {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%) translateY(24px);
+        background: rgba(12, 18, 34, 0.95);
+        border: 1px solid rgba(42, 51, 82, 0.8);
+        color: var(--text);
+        padding: 12px 18px;
+        border-radius: 14px;
+        font-size: 14px;
+        box-shadow: 0 16px 32px rgba(2, 6, 20, 0.6);
+        opacity: 0;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 999;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      .toast.success { border-color: rgba(52, 211, 153, 0.7); color: var(--success); }
+      .toast.error { border-color: rgba(248, 113, 113, 0.7); color: var(--danger); }
+      .pulse {
+        animation: pulse 0.6s ease;
+      }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); }
+        100% { box-shadow: 0 0 0 12px rgba(34, 211, 238, 0); }
+      }
+      @media (max-width: 640px) {
+        body { padding: 16px; }
+        .wrap { padding: 16px; }
+        h1 { font-size: 20px; }
+        button { width: 100%; }
+        .actions { flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section id="auth" class="card">
+        <h2>Sign in</h2>
+        <div class="row">
+          <label>Email</label>
+          <input id="email" type="email" placeholder="you@example.com" autocomplete="username"/>
+        </div>
+        <div class="row">
+          <label>Password</label>
+          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+        </div>
+        <div class="actions">
+          <button id="login">Sign in</button>
+        </div>
+      </section>
+
+      <section id="settings" class="hidden">
+        <div class="card grid">
+          <div class="row">
+            <label>Process</label>
+            <div id="process-tabs" class="process-tabs"></div>
+          </div>
+        </div>
+
+        <div id="garage-settings" class="card grid">
+          <div class="row-inline">
+            <div>
+              <div style="font-weight:600;">System enabled</div>
+              <div class="meta">Toggle to pause all automation.</div>
+            </div>
+            <label class="switch">
+              <input id="enabled" type="checkbox"/>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="row">
+            <label>Close delay (minutes)</label>
+            <input id="close_delay_min" type="number" min="1" value="10" inputmode="numeric"/>
+          </div>
+          <div class="row">
+            <label>Check delay (minutes)</label>
+            <input id="check_delay_min" type="number" min="1" value="1" inputmode="numeric"/>
+          </div>
+          <div class="row">
+            <label>Retry delay (minutes)</label>
+            <input id="retry_delay_min" type="number" min="1" value="4" inputmode="numeric"/>
+          </div>
+          <div class="row">
+            <label>Close cooldown (seconds)</label>
+            <input id="close_cooldown_sec" type="number" min="10" value="60" inputmode="numeric"/>
+          </div>
+          <div class="row">
+            <label>Lock TTL (seconds)</label>
+            <input id="lock_ttl_sec" type="number" min="10" value="55" inputmode="numeric"/>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="save">Save settings</button>
+        </div>
+        <div class="meta" id="save-status"></div>
+      </section>
+
+      <section id="data" class="hidden">
+        <div id="garage-data-card" class="card grid">
+          <div class="row-inline">
+            <div style="font-weight:600;">Live data</div>
+            <div class="segmented">
+              <button id="view-events" class="active" type="button">Events</button>
+              <button id="view-state" type="button">State</button>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="refresh-data" class="secondary">Refresh</button>
+            <button id="load-more-events" class="secondary">Load more</button>
+          </div>
+          <div id="data-list" class="list"></div>
+          <div class="meta" id="data-status"></div>
+        </div>
+        <div id="pos-summary" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Training summary</div>
+            <div class="meta" id="pos-summary-updated">—</div>
+          </div>
+          <div class="row-inline">
+            <div id="pos-summary-freshness" class="pill unknown">Freshness</div>
+            <div id="pos-run-status" class="pill unknown">Last run</div>
+          </div>
+          <div id="pos-summary-metrics" class="state-metrics"></div>
+          <div class="meta" id="pos-summary-note"></div>
+        </div>
+        <div id="pos-plan" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Today’s plan</div>
+            <div class="meta" id="pos-plan-date">—</div>
+          </div>
+          <div id="pos-plan-body" class="list"></div>
+          <div class="meta" id="pos-plan-note"></div>
+        </div>
+        <div id="pos-stats" class="card grid hidden">
+          <div class="row-inline">
+            <div style="font-weight:600;">Weekly averages</div>
+            <div class="meta" id="pos-stats-range">—</div>
+          </div>
+          <div id="pos-stats-list" class="list"></div>
+          <div class="meta" id="pos-stats-note"></div>
+        </div>
+        <div class="actions">
+          <button id="logout" class="secondary">Sign out</button>
+        </div>
+      </section>
+    </div>
+    <div id="toast" class="toast"></div>
+
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+      const SUPABASE_URL = "{{SUPABASE_URL}}";
+      const SUPABASE_ANON_KEY = "{{SUPABASE_ANON_KEY}}";
+      const AGENT_INBOX_URL = "{{AGENT_INBOX_URL}}";
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const authEl = document.getElementById("auth");
+      const settingsEl = document.getElementById("settings");
+      const dataEl = document.getElementById("data");
+
+      const emailEl = document.getElementById("email");
+      const passwordEl = document.getElementById("password");
+      const processTabsEl = document.getElementById("process-tabs");
+      const enabledEl = document.getElementById("enabled");
+      const closeDelayEl = document.getElementById("close_delay_min");
+      const checkDelayEl = document.getElementById("check_delay_min");
+      const retryDelayEl = document.getElementById("retry_delay_min");
+      const closeCooldownEl = document.getElementById("close_cooldown_sec");
+      const lockTtlEl = document.getElementById("lock_ttl_sec");
+      const saveStatusEl = document.getElementById("save-status");
+      const dataListEl = document.getElementById("data-list");
+      const dataStatusEl = document.getElementById("data-status");
+      const garageDataCardEl = document.getElementById("garage-data-card");
+      const posSummaryEl = document.getElementById("pos-summary");
+      const posSummaryMetricsEl = document.getElementById("pos-summary-metrics");
+      const posSummaryUpdatedEl = document.getElementById("pos-summary-updated");
+      const posSummaryFreshnessEl = document.getElementById("pos-summary-freshness");
+      const posSummaryNoteEl = document.getElementById("pos-summary-note");
+      const posPlanEl = document.getElementById("pos-plan");
+      const posPlanBodyEl = document.getElementById("pos-plan-body");
+      const posPlanDateEl = document.getElementById("pos-plan-date");
+      const posPlanNoteEl = document.getElementById("pos-plan-note");
+      const posStatsEl = document.getElementById("pos-stats");
+      const posStatsListEl = document.getElementById("pos-stats-list");
+      const posStatsRangeEl = document.getElementById("pos-stats-range");
+      const posStatsNoteEl = document.getElementById("pos-stats-note");
+      const posRunStatusEl = document.getElementById("pos-run-status");
+      const garageSettingsEl = document.getElementById("garage-settings");
+      const viewEventsEl = document.getElementById("view-events");
+      const viewStateEl = document.getElementById("view-state");
+      const loadMoreEventsEl = document.getElementById("load-more-events");
+      const toastEl = document.getElementById("toast");
+      const POS_PROCESS_ID = "personal_ops";
+      // Add future process views by extending VIEW_DEFS with visible/hidden sections.
+      const VIEW_DEFS = {
+        garage: {
+          label: "Garage Controller",
+          visibleIds: [
+            "garage-settings",
+            "garage-data-card",
+            "data-list",
+            "data-status",
+            "load-more-events",
+          ],
+          hiddenIds: ["pos-summary", "pos-plan", "pos-stats"],
+        },
+        pos: {
+          label: "Personal Ops",
+          visibleIds: ["pos-summary", "pos-plan", "pos-stats"],
+          hiddenIds: [
+            "garage-settings",
+            "garage-data-card",
+            "data-list",
+            "data-status",
+            "load-more-events",
+          ],
+        },
+      };
+
+      let currentProcessId = "global";
+      let currentDataView = "events";
+      let currentView = "garage";
+      const DOORS = ["Left", "Middle", "Right"];
+      const EVENTS_PAGE_SIZE = 200;
+      let eventsLimit = EVENTS_PAGE_SIZE;
+
+      async function loadSettings() {
+        const { data, error } = await supabase
+          .from("garage_settings")
+          .select("*")
+          .eq("id", currentProcessId)
+          .single();
+        if (error) {
+          if (saveStatusEl) saveStatusEl.textContent = "Failed to load settings: " + error.message;
+          return;
+        }
+        enabledEl.checked = data.enabled ?? true;
+        closeDelayEl.value = data.close_delay_min ?? 10;
+        checkDelayEl.value = data.check_delay_min ?? 1;
+        retryDelayEl.value = data.retry_delay_min ?? 4;
+        closeCooldownEl.value = data.close_cooldown_sec ?? 60;
+        lockTtlEl.value = data.lock_ttl_sec ?? 55;
+      }
+
+      function renderProcessTabs(processes) {
+        processTabsEl.innerHTML = "";
+        processes.forEach((process) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "process-tab";
+          button.textContent = process.label ?? process.id;
+          button.dataset.processId = process.id;
+          button.dataset.view = "garage";
+          if (currentView === "garage" && process.id === currentProcessId) {
+            button.classList.add("active");
+          }
+          button.addEventListener("click", async () => {
+            currentView = "garage";
+            currentProcessId = process.id;
+            renderProcessTabs(processes);
+            await loadSettings();
+            setActiveViewState(currentView);
+            await loadData();
+          });
+          processTabsEl.appendChild(button);
+        });
+
+        Object.entries(VIEW_DEFS).forEach(([viewId, viewDef]) => {
+          if (viewId === "garage") return;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "process-tab";
+          button.textContent = viewDef.label ?? viewId;
+          button.dataset.view = viewId;
+          if (currentView === viewId) {
+            button.classList.add("active");
+          }
+          button.addEventListener("click", async () => {
+            currentView = viewId;
+            renderProcessTabs(processes);
+            setActiveViewState(currentView);
+            await loadData();
+          });
+          processTabsEl.appendChild(button);
+        });
+
+        if (processes.length && !processes.find((p) => p.id === currentProcessId)) {
+          currentProcessId = processes[0].id;
+          renderProcessTabs(processes);
+        }
+      }
+
+      async function loadProcesses() {
+        const { data, error } = await supabase
+          .from("garage_settings")
+          .select("*")
+          .order("label", { ascending: true });
+        let processes = data ?? [];
+        if (error) {
+          if (saveStatusEl) saveStatusEl.textContent = "Failed to load processes: " + error.message;
+          processes = [];
+        }
+        if (!processes.length) {
+          processes = [{ id: "global", label: "Garage Controller" }];
+        }
+        renderProcessTabs(processes);
+        setActiveViewState(currentView);
+        if (processes.length) {
+          if (currentView === "garage") {
+            await loadSettings();
+          }
+        }
+      }
+
+      async function refreshSession() {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+        if (session) {
+          authEl.classList.add("hidden");
+          settingsEl.classList.remove("hidden");
+          dataEl.classList.remove("hidden");
+          if (saveStatusEl) saveStatusEl.textContent = "";
+          await loadProcesses();
+          await loadData();
+        } else {
+          authEl.classList.remove("hidden");
+          settingsEl.classList.add("hidden");
+          dataEl.classList.add("hidden");
+          if (saveStatusEl) saveStatusEl.textContent = "Please sign in";
+        }
+      }
+
+      document.getElementById("login").addEventListener("click", async () => {
+        const email = emailEl.value.trim();
+        const password = passwordEl.value;
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          if (saveStatusEl) saveStatusEl.textContent = "Sign in failed: " + error.message;
+          return;
+        }
+        await refreshSession();
+      });
+
+      document.getElementById("save").addEventListener("click", async () => {
+        await saveSettings({ announce: false, signal: false });
+      });
+
+      enabledEl.addEventListener("change", async () => {
+        enabledEl.classList.add("pulse");
+        setTimeout(() => enabledEl.classList.remove("pulse"), 600);
+        await saveSettings({ announce: true, signal: true });
+      });
+
+      async function saveSettings({ announce, signal }) {
+        const payload = {
+          id: currentProcessId,
+          enabled: enabledEl.checked,
+          close_delay_min: Number(closeDelayEl.value || 10),
+          check_delay_min: Number(checkDelayEl.value || 1),
+          retry_delay_min: Number(retryDelayEl.value || 4),
+          close_cooldown_sec: Number(closeCooldownEl.value || 60),
+          lock_ttl_sec: Number(lockTtlEl.value || 55),
+        };
+        const { error } = await supabase
+          .from("garage_settings")
+          .upsert(payload, { onConflict: "id" });
+        if (error) {
+          if (saveStatusEl) saveStatusEl.textContent = "Save failed: " + error.message;
+          if (announce) showToast("Failed to save settings.", "error");
+          return;
+        }
+        if (saveStatusEl) saveStatusEl.textContent = "Saved.";
+        setTimeout(() => {
+          if (saveStatusEl) saveStatusEl.textContent = "";
+        }, 1500);
+
+        if (signal) {
+          const { error: fnError } = await supabase.functions.invoke("garage-scheduler", {
+            body: {},
+          });
+          if (fnError) {
+            if (announce) {
+              showToast("Saved, but scheduler ping failed.", "error");
+            }
+          } else if (announce) {
+            showToast(enabledEl.checked ? "Scheduler resumed." : "Scheduler paused.", "success");
+          }
+        } else if (announce) {
+          showToast("Settings saved.", "success");
+        }
+      }
+
+      function showToast(message, type) {
+        if (!toastEl) return;
+        toastEl.textContent = message;
+        toastEl.className = `toast show ${type || ""}`.trim();
+        setTimeout(() => {
+          toastEl.className = "toast";
+          toastEl.textContent = "";
+        }, 2000);
+      }
+
+      function formatDuration(ms) {
+        if (!ms || ms < 0) return "—";
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        if (days > 0) return `${days}d ${hours % 24}h`;
+        if (hours > 0) return `${hours}h ${minutes % 60}m`;
+        return `${minutes}m`;
+      }
+
+      function formatAction(action) {
+        if (!action) return "—";
+        return String(action)
+          .replace(/_/g, " ")
+          .replace(/\\b\\w/g, (c) => c.toUpperCase());
+      }
+
+      function classifyCountdown(ms) {
+        if (ms == null) return { label: "No schedule", cls: "unknown" };
+        if (ms < 0) return { label: `Overdue by ${formatDuration(-ms)}`, cls: "overdue" };
+        if (ms < 5 * 60 * 1000) return { label: `Next in ${formatDuration(ms)}`, cls: "soon" };
+        return { label: `Next in ${formatDuration(ms)}`, cls: "ontrack" };
+      }
+
+      async function loadLatestEventsByDoor() {
+        const { data, error } = await supabase
+          .from("garage_events")
+          .select("id,created_at,event_type,door,source")
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (error || !data) return {};
+        const latest = {};
+        data.forEach((row) => {
+          if (!row.door || latest[row.door]) return;
+          latest[row.door] = row;
+        });
+        return latest;
+      }
+
+      function formatTimestamp(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString([], {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function formatDistance(meters) {
+        const value = Number(meters ?? NaN);
+        if (Number.isNaN(value) || value <= 0) return "—";
+        const miles = value / 1609.34;
+        return `${miles.toFixed(1)} mi`;
+      }
+
+      function formatMinutes(seconds) {
+        const value = Number(seconds ?? NaN);
+        if (Number.isNaN(value) || value <= 0) return "—";
+        return `${Math.round(value / 60)} min`;
+      }
+
+      function formatCount(value) {
+        if (value === null || value === undefined) return "—";
+        return String(value);
+      }
+
+      function formatAgeDays(value) {
+        if (!value) return null;
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        const diffMs = Date.now() - date.getTime();
+        if (diffMs < 0) return null;
+        return diffMs / (24 * 60 * 60 * 1000);
+      }
+
+      function staleLabel(label, ageDays, threshold) {
+        if (ageDays === null) return `${label} missing`;
+        if (ageDays >= threshold) return `${label} stale (${ageDays.toFixed(1)}d)`;
+        return null;
+      }
+
+      async function loadPosSummary() {
+        if (!posSummaryMetricsEl || !posSummaryEl) return;
+        if (posSummaryNoteEl) posSummaryNoteEl.textContent = "";
+        posSummaryMetricsEl.innerHTML = "";
+
+        const trainingReq = supabase
+          .from("training_state")
+          .select("workout_count_7d,endurance_sessions_7d,strength_sessions_7d,strength_time_s_7d,strength_capacity_7d,total_distance_m_7d,total_time_s_7d,updated_at")
+          .eq("id", "global")
+          .maybeSingle();
+        const readinessReq = supabase
+          .from("readiness_state")
+          .select("readiness_score,updated_at,sleep_source,weight_source,sleep_updated_at,weight_updated_at")
+          .eq("id", "global")
+          .maybeSingle();
+        const runReq = supabase
+          .from("pos_runs")
+          .select("ran_at,ok")
+          .order("ran_at", { ascending: false })
+          .limit(1);
+
+        const [{ data: training, error: trainingError }, { data: readiness }, { data: runData }] = await Promise.all([
+          trainingReq,
+          readinessReq,
+          runReq,
+        ]);
+        const runRow = Array.isArray(runData) && runData.length ? runData[0] : null;
+
+        if (trainingError) {
+          if (posSummaryNoteEl) posSummaryNoteEl.textContent = "Training summary unavailable.";
+          return;
+        }
+
+        const metrics = [
+          { label: "Workouts (7d)", value: formatCount(training?.workout_count_7d ?? 0) },
+          { label: "Endurance (7d)", value: formatCount(training?.endurance_sessions_7d ?? 0) },
+          { label: "Strength (7d)", value: formatCount(training?.strength_sessions_7d ?? 0) },
+          { label: "Strength time", value: formatMinutes(training?.strength_time_s_7d ?? 0) },
+          { label: "Strength load", value: formatCount(training?.strength_capacity_7d ?? 0) },
+          { label: "Distance (7d)", value: formatDistance(training?.total_distance_m_7d ?? 0) },
+          { label: "Readiness", value: readiness?.readiness_score !== null && readiness?.readiness_score !== undefined ? `${readiness.readiness_score}/100` : "—" },
+        ];
+
+        metrics.forEach((metric) => {
+          const item = document.createElement("div");
+          item.className = "state-metric";
+          item.innerHTML = `<span>${metric.label}</span><strong>${metric.value}</strong>`;
+          posSummaryMetricsEl.appendChild(item);
+        });
+
+        const updatedAt = training?.updated_at ?? readiness?.updated_at;
+        if (posSummaryUpdatedEl) {
+          posSummaryUpdatedEl.textContent = updatedAt ? `Updated ${formatTimestamp(updatedAt)}` : "—";
+        }
+
+        if (posSummaryNoteEl) {
+          const notes = [];
+          const sleepAge = formatAgeDays(readiness?.sleep_updated_at);
+          const weightAge = formatAgeDays(readiness?.weight_updated_at);
+          const sleepStale = staleLabel("Sleep", sleepAge, 2);
+          const weightStale = staleLabel("Weight", weightAge, 7);
+          if (readiness?.sleep_source === "none") {
+            notes.push("Sleep source missing");
+          } else if (sleepStale) {
+            notes.push(sleepStale);
+          }
+          if (readiness?.weight_source === "none") {
+            notes.push("Weight source missing");
+          } else if (weightStale) {
+            notes.push(weightStale);
+          }
+          posSummaryNoteEl.textContent = notes.length ? notes.join(" · ") : "Freshness OK";
+          if (posSummaryFreshnessEl) {
+            const hasStale = notes.length > 0;
+            posSummaryFreshnessEl.textContent = hasStale ? "Needs attention" : "Fresh";
+            posSummaryFreshnessEl.classList.remove("unknown", "ontrack", "soon", "overdue");
+            posSummaryFreshnessEl.classList.add(hasStale ? "overdue" : "ontrack");
+          }
+        }
+
+        if (posRunStatusEl) {
+          if (runRow?.ran_at) {
+            const ranAt = formatTimestamp(runRow.ran_at);
+            const ok = runRow.ok !== false;
+            posRunStatusEl.textContent = ok ? `Last run OK · ${ranAt}` : `Last run failed · ${ranAt}`;
+            posRunStatusEl.classList.remove("unknown", "ontrack", "soon", "overdue");
+            posRunStatusEl.classList.add(ok ? "ontrack" : "overdue");
+          } else {
+            posRunStatusEl.textContent = "Last run unknown";
+            posRunStatusEl.classList.remove("ontrack", "soon", "overdue");
+            posRunStatusEl.classList.add("unknown");
+          }
+        }
+      }
+
+      function setActiveView(view) {
+        currentDataView = view;
+        viewEventsEl.classList.toggle("active", view === "events");
+        viewStateEl.classList.toggle("active", view === "state");
+      }
+
+      function setActiveViewState(viewId) {
+        const viewDef = VIEW_DEFS[viewId] ?? VIEW_DEFS.garage;
+        currentView = viewId;
+        viewDef.visibleIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.classList.remove("hidden");
+        });
+        viewDef.hiddenIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add("hidden");
+        });
+      }
+
+      async function loadEvents() {
+        dataListEl.innerHTML = "";
+        dataListEl.className = "list";
+        if (dataStatusEl) dataStatusEl.textContent = "Loading…";
+        const { data, error } = await supabase
+          .from("garage_events")
+          .select("id,created_at,event_type,door")
+          .order("created_at", { ascending: false })
+          .limit(eventsLimit);
+        if (error) {
+          if (dataStatusEl) dataStatusEl.textContent = "Failed to load events: " + error.message;
+          return;
+        }
+        if (!data || !data.length) {
+          if (dataStatusEl) dataStatusEl.textContent = "No events yet.";
+          return;
+        }
+        if (dataStatusEl) dataStatusEl.textContent = `Showing ${data.length} most recent events.`;
+        data.forEach((row) => {
+          const item = document.createElement("div");
+          item.className = "list-item";
+          const title = document.createElement("div");
+          title.className = "list-title";
+          title.textContent = row.event_type ?? "EVENT";
+          const meta = document.createElement("div");
+          meta.className = "list-meta";
+          const rowLine = document.createElement("div");
+          rowLine.className = "list-row";
+          rowLine.innerHTML = `
+            <div><strong>${row.door ?? "?"}</strong>Door</div>
+            <div><strong>${formatTimestamp(row.created_at)}</strong>Time</div>
+            <div><strong>${row.id ?? "—"}</strong>Row</div>
+          `;
+          item.appendChild(title);
+          item.appendChild(meta);
+          item.appendChild(rowLine);
+          dataListEl.appendChild(item);
+        });
+      }
+
+      async function loadState() {
+        dataListEl.innerHTML = "";
+        dataListEl.className = "list state-grid";
+        if (dataStatusEl) dataStatusEl.textContent = "Loading…";
+        const latestEvents = await loadLatestEventsByDoor();
+        const { data, error } = await supabase
+          .from("garage_state")
+          .select("door,is_open,session_start,last_open,last_close,next_action,next_action_at,last_close_attempt_at,updated_at")
+          .order("door", { ascending: true });
+        if (error) {
+          if (dataStatusEl) dataStatusEl.textContent = "Failed to load state: " + error.message;
+          return;
+        }
+        if (!data || !data.length) {
+          if (dataStatusEl) dataStatusEl.textContent = "No state rows yet.";
+          return;
+        }
+        if (dataStatusEl) dataStatusEl.textContent = "";
+        const byDoor = {};
+        data.forEach((row) => {
+          if (row.door) {
+            byDoor[row.door] = row;
+          }
+        });
+        const now = new Date();
+        DOORS.forEach((door) => {
+          const row = byDoor[door] || {};
+          const hasData = Boolean(row.door);
+          const isOpen = row.is_open === true;
+          const sessionStart = row.session_start ? new Date(row.session_start) : null;
+          const lastClose = row.last_close ? new Date(row.last_close) : null;
+          const latestEvent = latestEvents[door] || null;
+          const nextAt = row.next_action_at ? new Date(row.next_action_at) : null;
+          const nextDelta = nextAt && !Number.isNaN(nextAt.getTime())
+            ? nextAt.getTime() - now.getTime()
+            : null;
+          const countdown = classifyCountdown(nextDelta);
+          const warnings = [];
+
+          let ageLabel = "Open for";
+          let ageValue = "—";
+          if (hasData && isOpen && sessionStart && !Number.isNaN(sessionStart.getTime())) {
+            ageValue = formatDuration(now.getTime() - sessionStart.getTime());
+          } else if (hasData && !isOpen && lastClose && !Number.isNaN(lastClose.getTime())) {
+            ageLabel = "Closed for";
+            ageValue = formatDuration(now.getTime() - lastClose.getTime());
+          }
+
+          if (hasData && !isOpen && row.next_action_at) {
+            warnings.push("Pending action while closed");
+          }
+          if (hasData && isOpen && !row.session_start) {
+            warnings.push("Missing session start");
+          }
+          if (hasData && isOpen && !row.next_action_at) {
+            warnings.push("No close scheduled");
+          }
+
+          const statusText = hasData ? (isOpen ? "OPEN" : "CLOSED") : "NO DATA";
+          const statusClass = hasData ? (isOpen ? "open" : "closed") : "unknown";
+          const lastEventLabel = hasData ? (isOpen ? "Opened" : "Closed") : "Last event";
+          const lastEventTime = isOpen ? row.last_open || row.session_start : row.last_close;
+
+          const forceDisabled = !hasData || !isOpen;
+          const card = document.createElement("div");
+          card.className = "state-card";
+          card.innerHTML = `
+            <div class="state-header">
+              <div class="state-door">${door}</div>
+              <div class="state-badge ${statusClass}">${statusText}</div>
+            </div>
+            <div class="state-header">
+              <div class="pill ${countdown.cls}">
+                ${countdown.label}
+              </div>
+              ${warnings.length ? `<div class="warning">${warnings[0]}</div>` : ""}
+            </div>
+            <div class="state-metrics">
+              <div class="state-metric">
+                <span>Latest event</span>
+                <strong>${latestEvent ? `${latestEvent.event_type ?? "EVENT"} • ${formatTimestamp(latestEvent.created_at)}` : "—"}</strong>
+              </div>
+              <div class="state-metric">
+                <span>${lastEventLabel}</span>
+                <strong>${formatTimestamp(lastEventTime)}</strong>
+              </div>
+              <div class="state-metric">
+                <span>${ageLabel}</span>
+                <strong>${ageValue}</strong>
+              </div>
+              <div class="state-metric">
+                <span>Next action</span>
+                <strong>${formatAction(row.next_action)}</strong>
+              </div>
+              <div class="state-metric">
+                <span>Next at</span>
+                <strong>${formatTimestamp(row.next_action_at)}</strong>
+              </div>
+              <div class="state-metric">
+                <span>Last attempt</span>
+                <strong>${formatTimestamp(row.last_close_attempt_at)}</strong>
+              </div>
+            </div>
+            <div class="state-actions">
+              <button class="secondary" data-action="force-close" data-door="${door}" ${forceDisabled ? "disabled" : ""}>
+                ${forceDisabled ? "Close unavailable" : "Force close now"}
+              </button>
+            </div>
+          `;
+          dataListEl.appendChild(card);
+        });
+
+        dataListEl.querySelectorAll("[data-action='force-close']").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const door = btn.dataset.door;
+            if (!door) return;
+            const nowIso = new Date().toISOString();
+            btn.disabled = true;
+            const { error: updateError } = await supabase
+              .from("garage_state")
+              .update({
+                next_action: "close_attempt",
+                next_action_at: nowIso,
+                next_close_at: nowIso,
+                updated_at: nowIso,
+              })
+              .eq("door", door);
+            if (updateError) {
+              showToast("Failed to schedule close.", "error");
+              btn.disabled = false;
+              return;
+            }
+            const { error: fnError } = await supabase.functions.invoke("garage-scheduler", {
+              body: {},
+            });
+            if (fnError) {
+              showToast("Scheduled, but scheduler ping failed.", "error");
+            } else {
+              showToast(`Close requested for ${door}.`, "success");
+            }
+            btn.disabled = false;
+            await loadState();
+          });
+        });
+      }
+
+      async function loadData() {
+        if (currentView === "pos") {
+          await loadPosSummary();
+          await loadPosPlan();
+          await loadPosStats();
+          return;
+        }
+        if (currentDataView === "state") {
+          await loadState();
+        } else {
+          await loadEvents();
+        }
+      }
+
+      viewEventsEl.addEventListener("click", async () => {
+        setActiveView("events");
+        if (loadMoreEventsEl) loadMoreEventsEl.disabled = false;
+        await loadData();
+      });
+
+      viewStateEl.addEventListener("click", async () => {
+        setActiveView("state");
+        if (loadMoreEventsEl) loadMoreEventsEl.disabled = true;
+        await loadData();
+      });
+
+      document.getElementById("refresh-data").addEventListener("click", async () => {
+        eventsLimit = EVENTS_PAGE_SIZE;
+        await loadData();
+      });
+
+      if (loadMoreEventsEl) {
+        loadMoreEventsEl.addEventListener("click", async () => {
+          if (currentDataView !== "events") return;
+          eventsLimit += EVENTS_PAGE_SIZE;
+          await loadEvents();
+        });
+      }
+
+
+      document.getElementById("logout").addEventListener("click", async () => {
+        await supabase.auth.signOut();
+        await refreshSession();
+      });
+
+      function localDateKey() {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).formatToParts(new Date());
+        const lookup = {};
+        parts.forEach((part) => {
+          if (part.type !== "literal") lookup[part.type] = part.value;
+        });
+        return `${lookup.year}-${lookup.month}-${lookup.day}`;
+      }
+
+      function renderPlanList(title, value) {
+        const item = document.createElement("div");
+        item.className = "list-item";
+        item.innerHTML = `<div class="list-title">${title}</div><div class="list-meta">${value}</div>`;
+        return item;
+      }
+
+      function renderStatList(title, value, meta) {
+        const item = document.createElement("div");
+        item.className = "list-item";
+        item.innerHTML = `
+          <div class="list-title">${title}</div>
+          <div class="list-meta">${value}</div>
+          ${meta ? `<div class="list-row">${meta}</div>` : ""}
+        `;
+        return item;
+      }
+
+      function startOfWeekSunday(date) {
+        const start = new Date(date);
+        const day = start.getDay();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - day);
+        return start;
+      }
+
+      function daysSinceSunday(date) {
+        const day = date.getDay();
+        return Math.max(1, day);
+      }
+
+      function formatNumber(value, decimals = 0) {
+        if (value === null || value === undefined || Number.isNaN(value)) return "—";
+        return Number(value).toFixed(decimals);
+      }
+
+      function formatMiles(meters) {
+        if (!meters || Number.isNaN(meters)) return null;
+        return meters / 1609.34;
+      }
+
+      function formatYards(meters) {
+        if (!meters || Number.isNaN(meters)) return null;
+        return meters * 1.09361;
+      }
+
+      async function loadPosStats() {
+        if (!posStatsListEl) return;
+        posStatsListEl.innerHTML = "";
+        if (posStatsNoteEl) posStatsNoteEl.textContent = "";
+
+        const now = new Date();
+        const weekStart = startOfWeekSunday(now);
+        const daysElapsed = daysSinceSunday(now);
+        const weekStartIso = weekStart.toISOString();
+        if (posStatsRangeEl) {
+          posStatsRangeEl.textContent = `Since ${weekStart.toLocaleDateString()} (${daysElapsed} day${daysElapsed === 1 ? "" : "s"})`;
+        }
+
+        const [stravaResp, healthResp, nutritionResp] = await Promise.all([
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "strava")
+            .eq("event_type", "activity")
+            .gte("event_timestamp", weekStartIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "apple_health")
+            .eq("event_type", "health_metric")
+            .gte("event_timestamp", weekStartIso),
+          supabase
+            .from("pos_events")
+            .select("event_timestamp,payload")
+            .eq("source", "nutrition")
+            .gte("event_timestamp", weekStartIso),
+        ]);
+
+        let rideMeters = 0;
+        let swimMeters = 0;
+        let exerciseSeconds = 0;
+        if (stravaResp.data) {
+          stravaResp.data.forEach((row) => {
+            const payload = row.payload || {};
+            const distance = Number(payload.distance_m ?? payload.distance ?? 0);
+            const duration = Number(payload.elapsed_s ?? payload.elapsed_time ?? payload.duration_s ?? 0);
+            const typeRaw = payload.type ?? payload.activity_type ?? payload.sport_type ?? payload.workout_type ?? "";
+            const type = String(typeRaw).toLowerCase();
+            if (!Number.isNaN(distance) && distance > 0) {
+              if (type.includes("swim")) {
+                swimMeters += distance;
+              } else if (type.includes("ride") || type.includes("cycle") || type.includes("bike")) {
+                rideMeters += distance;
+              }
+            }
+            if (!Number.isNaN(duration) && duration > 0) {
+              exerciseSeconds += duration;
+            }
+          });
+        }
+
+        let steps = 0;
+        let activeCalories = 0;
+        let restingCalories = 0;
+        let exerciseMinutes = 0;
+        if (healthResp.data) {
+          healthResp.data.forEach((row) => {
+            const payload = row.payload || {};
+            const metricRaw = payload.metric ?? payload.value1 ?? "";
+            const metric = String(metricRaw).toLowerCase();
+            const value = Number(payload.value ?? payload.value2 ?? payload.amount ?? 0);
+            if (Number.isNaN(value)) return;
+            if (["steps", "step_count", "stepcount"].includes(metric)) {
+              steps += value;
+            } else if (["active_calories", "active_energy", "active_energy_burned", "active_calorie"].includes(metric)) {
+              activeCalories += value;
+            } else if (["resting_calories", "basal_energy", "basal_calories", "resting_energy", "bmr"].includes(metric)) {
+              restingCalories += value;
+            } else if (["exercise_minutes", "exercise_time", "apple_exercise_time"].includes(metric)) {
+              exerciseMinutes += value;
+            }
+          });
+        }
+
+        const milesTotal = formatMiles(rideMeters);
+        const yardsTotal = formatYards(swimMeters);
+        const hoursTotal = exerciseMinutes > 0 ? exerciseMinutes / 60 : exerciseSeconds / 3600;
+        let caloriesEaten = 0;
+        let proteinG = 0;
+        let carbsG = 0;
+        let fatG = 0;
+        if (nutritionResp.data) {
+          nutritionResp.data.forEach((row) => {
+            const payload = row.payload || {};
+            const calories = Number(payload.calories ?? payload.kcal ?? payload.energy_kcal ?? payload.value1 ?? 0);
+            const protein = Number(payload.protein_g ?? payload.protein ?? 0);
+            const carbs = Number(payload.carbs_g ?? payload.carbs ?? 0);
+            const fat = Number(payload.fat_g ?? payload.fat ?? 0);
+            if (!Number.isNaN(calories) && calories > 0) caloriesEaten += calories;
+            if (!Number.isNaN(protein) && protein > 0) proteinG += protein;
+            if (!Number.isNaN(carbs) && carbs > 0) carbsG += carbs;
+            if (!Number.isNaN(fat) && fat > 0) fatG += fat;
+          });
+        }
+        if (caloriesEaten <= 0) caloriesEaten = null;
+        if (proteinG <= 0) proteinG = null;
+        if (carbsG <= 0) carbsG = null;
+        if (fatG <= 0) fatG = null;
+
+        const stats = [
+          {
+            label: "Miles ridden",
+            total: milesTotal,
+            unit: "mi",
+          },
+          {
+            label: "Yards swam",
+            total: yardsTotal,
+            unit: "yd",
+          },
+          {
+            label: "Steps",
+            total: steps,
+            unit: "steps",
+          },
+          {
+            label: "Resting calories",
+            total: restingCalories,
+            unit: "kcal",
+          },
+          {
+            label: "Active calories",
+            total: activeCalories,
+            unit: "kcal",
+          },
+          {
+            label: "Exercise hours",
+            total: hoursTotal,
+            unit: "hrs",
+          },
+          {
+            label: "Calories eaten",
+            total: caloriesEaten,
+            unit: "kcal",
+          },
+          {
+            label: "Protein",
+            total: proteinG,
+            unit: "g",
+          },
+          {
+            label: "Carbs",
+            total: carbsG,
+            unit: "g",
+          },
+          {
+            label: "Fat",
+            total: fatG,
+            unit: "g",
+          },
+        ];
+
+        stats.forEach((stat) => {
+          if (stat.total === null || stat.total === undefined || Number.isNaN(stat.total) || stat.total === 0) {
+            posStatsListEl.appendChild(renderStatList(stat.label, "—", "No data yet"));
+            return;
+          }
+          const avg = stat.total / daysElapsed;
+          const decimals = stat.unit === "steps" ? 0 : 1;
+          const avgLabel = `${formatNumber(avg, decimals)} ${stat.unit}/day`;
+          const totalLabel = `Total: ${formatNumber(stat.total, decimals)} ${stat.unit}`;
+          posStatsListEl.appendChild(renderStatList(stat.label, avgLabel, totalLabel));
+        });
+
+        if (!nutritionResp.data?.length && posStatsNoteEl) {
+          posStatsNoteEl.textContent = "Nutrition not connected yet.";
+        }
+      }
+
+      async function loadPosPlan() {
+        if (!posPlanBodyEl) return;
+        posPlanBodyEl.innerHTML = "";
+        if (posPlanNoteEl) posPlanNoteEl.textContent = "";
+        const dateKey = localDateKey();
+        const { data, error } = await supabase
+          .from("coach_plan_daily")
+          .select("date,summary_text,plan_json,created_at")
+          .lte("date", dateKey)
+          .order("date", { ascending: false })
+          .limit(1);
+        if (error || !data || !data.length) {
+          if (posPlanNoteEl) posPlanNoteEl.textContent = "No plan available yet.";
+          if (posPlanDateEl) posPlanDateEl.textContent = "—";
+          return;
+        }
+        const plan = data[0];
+        const isToday = plan.date === dateKey;
+        if (posPlanDateEl) posPlanDateEl.textContent = isToday ? "Today" : `Latest: ${plan.date}`;
+        if (plan.summary_text) {
+          posPlanBodyEl.appendChild(renderPlanList("Summary", plan.summary_text));
+        }
+        const rec = plan.plan_json?.recommendation ?? {};
+        if (rec?.type) {
+          posPlanBodyEl.appendChild(renderPlanList("Type", rec.type));
+        }
+        if (rec?.duration_min) {
+          posPlanBodyEl.appendChild(renderPlanList("Duration", `${rec.duration_min} min`));
+        }
+        if (rec?.intensity) {
+          posPlanBodyEl.appendChild(renderPlanList("Intensity", rec.intensity));
+        }
+        if (rec?.reason) {
+          posPlanBodyEl.appendChild(renderPlanList("Why", rec.reason));
+        }
+        if (rec?.reason_codes && rec.reason_codes.length) {
+          posPlanBodyEl.appendChild(renderPlanList("Reason codes", rec.reason_codes.join(", ")));
+        }
+      }
+
+      refreshSession();
+    </script>
+  </body>
+</html>

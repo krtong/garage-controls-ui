@@ -1,5 +1,5 @@
 {
-  "name": "ifttt-garage-dashboard",
+  "name": "garage-controls-ui",
   "private": true,
   "scripts": {
     "test:e2e": "playwright test"
