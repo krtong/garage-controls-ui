@@ -625,9 +625,9 @@
           .single();
 
         if (!settingsError && settingsData) {
-          settings.closeDelay = settingsData.close_delay_minutes || 10;
-          settings.checkDelay = settingsData.check_delay_minutes || 1;
-          settings.retryDelay = settingsData.retry_delay_minutes || 5;
+          settings.closeDelay = settingsData.close_delay_min || 10;
+          settings.checkDelay = settingsData.check_delay_min || 1;
+          settings.retryDelay = settingsData.retry_delay_min || 5;
           updateSettingsUI();
         }
 
@@ -657,12 +657,13 @@
       try {
         const { error } = await supabase
           .from('garage_settings')
-          .upsert({
-            id: 1,
-            close_delay_minutes: settings.closeDelay,
-            check_delay_minutes: settings.checkDelay,
-            retry_delay_minutes: settings.retryDelay
-          });
+          .update({
+            close_delay_min: settings.closeDelay,
+            check_delay_min: settings.checkDelay,
+            retry_delay_min: settings.retryDelay,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', 'global');
 
         if (error) throw error;
         settingsPanel.classList.add('hidden');
