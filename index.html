@@ -192,15 +192,20 @@
       <div id="stateView" class="grid grid-cols-1 gap-6 md:grid-cols-3"></div>
 
       <!-- Events View -->
-      <div id="eventsView" class="hidden rounded-3xl border border-zinc-800/70 bg-zinc-900/25 p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-sm font-medium text-zinc-100">Event stream</div>
-            <div class="mt-1 text-xs text-zinc-500">Newest first</div>
+      <div id="eventsView" class="hidden">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div class="rounded-3xl border border-zinc-800/70 bg-zinc-900/25 p-4">
+            <div class="mb-3 text-center text-xs uppercase tracking-widest text-zinc-500">Left</div>
+            <div class="events-column max-h-[480px] overflow-auto rounded-2xl border border-zinc-800/60 bg-zinc-950/25" data-door="Left"></div>
           </div>
-        </div>
-        <div class="mt-5 max-h-[520px] overflow-auto rounded-2xl border border-zinc-800/60 bg-zinc-950/25">
-          <ul id="eventsList" class="divide-y divide-zinc-800/60"></ul>
+          <div class="rounded-3xl border border-zinc-800/70 bg-zinc-900/25 p-4">
+            <div class="mb-3 text-center text-xs uppercase tracking-widest text-zinc-500">Middle</div>
+            <div class="events-column max-h-[480px] overflow-auto rounded-2xl border border-zinc-800/60 bg-zinc-950/25" data-door="Middle"></div>
+          </div>
+          <div class="rounded-3xl border border-zinc-800/70 bg-zinc-900/25 p-4">
+            <div class="mb-3 text-center text-xs uppercase tracking-widest text-zinc-500">Right</div>
+            <div class="events-column max-h-[480px] overflow-auto rounded-2xl border border-zinc-800/60 bg-zinc-950/25" data-door="Right"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -294,7 +299,6 @@
     // DOM refs
     const stateView = document.getElementById('stateView');
     const eventsView = document.getElementById('eventsView');
-    const eventsList = document.getElementById('eventsList');
     const settingsPanel = document.getElementById('settingsPanel');
     const template = document.getElementById('doorCardTemplate');
 
@@ -504,13 +508,8 @@
           setupHoldButton(actionContainer.querySelector('.close-btn'));
         }
       } else {
-        actionContainer.innerHTML = `
-          <button class="open-btn w-full rounded-xl border border-zinc-700/70 py-3 text-xs uppercase tracking-widest text-zinc-300 transition-all hover:bg-zinc-700/30 hover:text-zinc-100"
-                  data-door="${door.door}">
-            Open Door
-          </button>
-        `;
-        actionContainer.querySelector('.open-btn').addEventListener('click', () => triggerDoor(door.door, 'open'));
+        // Closed - no action needed
+        actionContainer.innerHTML = '';
       }
     }
 
@@ -617,31 +616,51 @@
         updateDoorCard(card, door, now);
       });
 
-      // Update events list
-      eventsList.innerHTML = events.map(e => {
-        const type = (e.event_type || '').toUpperCase();
-        let dotClass = 'bg-blue-400';
-        if (type.includes('FAIL') || type.includes('ERROR')) dotClass = 'bg-amber-400';
-        else if (type.includes('CLOSED')) dotClass = 'bg-emerald-400';
-        else if (type.includes('SIGNAL') || type.includes('CLOSE')) dotClass = 'bg-red-400';
+      // Update events columns by door
+      ['Left', 'Middle', 'Right'].forEach(doorName => {
+        const column = document.querySelector(`.events-column[data-door="${doorName}"]`);
+        if (!column) return;
 
-        return `
-          <li class="flex items-center justify-between gap-4 px-5 py-4">
-            <div class="flex items-center gap-3">
-              <span class="h-2.5 w-2.5 rounded-full ${dotClass}"></span>
-              <div>
-                <div class="text-sm text-zinc-200">
-                  <span class="text-zinc-100">${e.event_type}</span>
-                  <span class="text-zinc-500"> • </span>
-                  <span class="text-zinc-300">${e.door}</span>
+        // Filter events for this door and only OPEN/CLOSED types
+        const doorEvents = events.filter(e => {
+          const type = (e.event_type || '').toUpperCase();
+          return e.door === doorName && (type === 'OPEN' || type === 'CLOSED');
+        });
+
+        // Group events by date
+        const grouped = {};
+        doorEvents.forEach(e => {
+          const date = new Date(e.created_at);
+          const dateKey = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          if (!grouped[dateKey]) grouped[dateKey] = [];
+          grouped[dateKey].push(e);
+        });
+
+        // Render with sticky date headers
+        let html = '';
+        Object.entries(grouped).forEach(([dateKey, dayEvents]) => {
+          html += `<div class="sticky top-0 z-10 bg-zinc-900/95 backdrop-blur-sm px-3 py-2 text-[10px] uppercase tracking-widest text-zinc-400 border-b border-zinc-800/50">${dateKey}</div>`;
+          dayEvents.forEach(e => {
+            const type = (e.event_type || '').toUpperCase();
+            const isOpen = type === 'OPEN';
+            const dotClass = isOpen ? 'bg-blue-400' : 'bg-emerald-400';
+            const label = isOpen ? 'Opened' : 'Closed';
+            const time = new Date(e.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+            html += `
+              <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-800/30">
+                <div class="flex items-center gap-2">
+                  <span class="h-2 w-2 rounded-full ${dotClass}"></span>
+                  <span class="text-sm text-zinc-300">${label}</span>
                 </div>
-                <div class="text-xs text-zinc-500">${formatTime(e.created_at)}</div>
+                <span class="text-xs text-zinc-500">${time}</span>
               </div>
-            </div>
-            <div class="text-[10px] font-mono text-zinc-600">${String(e.id).slice(0, 8)}</div>
-          </li>
-        `;
-      }).join('');
+            `;
+          });
+        });
+
+        column.innerHTML = html || '<div class="px-3 py-4 text-center text-xs text-zinc-600">No events</div>';
+      });
 
       // Update status
       document.getElementById('statusText').textContent = `Live data • ${systemEnabled ? 'System enabled' : 'System paused'}`;
@@ -877,7 +896,7 @@
       doors = [];
       events = [];
       stateView.innerHTML = '';
-      eventsList.innerHTML = '';
+      document.querySelectorAll('.events-column').forEach(col => col.innerHTML = '');
     }
 
     // Login event listeners
