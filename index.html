@@ -51,6 +51,46 @@
   </div>
   <div class="pointer-events-none fixed inset-0 z-0 bg-gradient-to-t from-black/70 via-transparent to-black/25"></div>
 
+  <!-- Login Page -->
+  <div id="loginPage" class="relative z-10 min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <div class="text-3xl uppercase tracking-[0.4em] text-zinc-100 mb-2">Garage</div>
+        <div class="text-sm text-zinc-500 tracking-widest">Controller</div>
+      </div>
+
+      <div class="rounded-3xl border border-zinc-800/70 bg-zinc-900/50 backdrop-blur-sm p-8">
+        <div class="mb-6">
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Email</div>
+          <input type="email" id="loginEmail"
+                 class="w-full px-4 py-3 rounded-xl border border-zinc-700/50 bg-zinc-800/50 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 transition-colors"
+                 placeholder="you@example.com">
+        </div>
+
+        <div class="mb-6">
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Password</div>
+          <input type="password" id="loginPassword"
+                 class="w-full px-4 py-3 rounded-xl border border-zinc-700/50 bg-zinc-800/50 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 transition-colors"
+                 placeholder="••••••••">
+        </div>
+
+        <div id="loginError" class="hidden mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm"></div>
+
+        <button id="loginBtn"
+                class="w-full py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs uppercase tracking-widest font-medium hover:bg-emerald-500/30 transition-colors">
+          Sign In
+        </button>
+      </div>
+
+      <div class="mt-6 text-center text-xs text-zinc-600">
+        Secure authentication via Supabase
+      </div>
+    </div>
+  </div>
+
+  <!-- App Container (hidden until logged in) -->
+  <div id="appContainer" class="hidden">
+
   <!-- Header -->
   <header class="relative z-10 border-b border-zinc-800/50 px-8 py-6">
     <div class="mx-auto flex max-w-6xl items-center justify-between">
@@ -175,6 +215,8 @@
       <div id="statusText" class="font-mono text-[10px] text-zinc-600">Live data</div>
     </div>
   </footer>
+
+  </div><!-- End App Container -->
 
   <!-- Door Card Template -->
   <template id="doorCardTemplate">
@@ -767,12 +809,120 @@
         .subscribe();
     }
 
+    // Authentication
+    const loginPage = document.getElementById('loginPage');
+    const appContainer = document.getElementById('appContainer');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const loginError = document.getElementById('loginError');
+    const signOutBtn = document.getElementById('signOutBtn');
+
+    function showLogin() {
+      loginPage.classList.remove('hidden');
+      appContainer.classList.add('hidden');
+    }
+
+    function showApp() {
+      loginPage.classList.add('hidden');
+      appContainer.classList.remove('hidden');
+    }
+
+    function showLoginError(message) {
+      loginError.textContent = message;
+      loginError.classList.remove('hidden');
+    }
+
+    function hideLoginError() {
+      loginError.classList.add('hidden');
+    }
+
+    async function handleLogin() {
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value;
+
+      if (!email || !password) {
+        showLoginError('Please enter email and password');
+        return;
+      }
+
+      hideLoginError();
+      loginBtn.textContent = 'Signing in...';
+      loginBtn.disabled = true;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      loginBtn.textContent = 'Sign In';
+      loginBtn.disabled = false;
+
+      if (error) {
+        showLoginError(error.message);
+        return;
+      }
+
+      showApp();
+      fetchData();
+      setupRealtimeSubscriptions();
+      startPolling();
+    }
+
+    async function handleSignOut() {
+      await supabase.auth.signOut();
+      showLogin();
+      stopPolling();
+      // Clear data
+      doors = [];
+      events = [];
+      stateView.innerHTML = '';
+      eventsList.innerHTML = '';
+    }
+
+    // Login event listeners
+    loginBtn.addEventListener('click', handleLogin);
+    loginPassword.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleLogin();
+    });
+    loginEmail.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loginPassword.focus();
+    });
+    signOutBtn.addEventListener('click', handleSignOut);
+
+    // Polling for state changes every 10 seconds
+    let pollingInterval = null;
+
+    function startPolling() {
+      if (pollingInterval) return;
+      pollingInterval = setInterval(fetchData, 10000);
+    }
+
+    function stopPolling() {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+    }
+
     // Clock tick for countdown updates
     setInterval(render, 250);
 
-    // Initial load
-    fetchData();
-    setupRealtimeSubscriptions();
+    // Check for existing session on load
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        showApp();
+        fetchData();
+        setupRealtimeSubscriptions();
+        startPolling();
+      } else {
+        showLogin();
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
