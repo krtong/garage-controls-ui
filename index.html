@@ -84,34 +84,34 @@
           <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Close Delay</div>
           <div class="flex items-center gap-3">
             <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div id="closeDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-blue-500" style="width: 60%"></div>
+              <div id="closeDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-blue-500" style="width: 16%"></div>
             </div>
             <span id="closeDelayValue" class="w-10 text-right font-mono text-xl font-light text-zinc-100">10</span>
             <span class="text-xs text-zinc-500">min</span>
           </div>
-          <input type="range" id="closeDelaySlider" min="1" max="15" value="10" class="mt-2 w-full accent-blue">
+          <input type="range" id="closeDelaySlider" min="5" max="60" step="5" value="10" class="mt-2 w-full accent-blue">
         </div>
         <div class="flex-1">
           <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Check Delay</div>
           <div class="flex items-center gap-3">
             <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div id="checkDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-red-500" style="width: 20%"></div>
+              <div id="checkDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-red-500" style="width: 14%"></div>
             </div>
-            <span id="checkDelayValue" class="w-10 text-right font-mono text-xl font-light text-zinc-100">1</span>
-            <span class="text-xs text-zinc-500">min</span>
+            <span id="checkDelayValue" class="w-14 text-right font-mono text-xl font-light text-zinc-100">1:00</span>
+            <span class="text-xs text-zinc-500"></span>
           </div>
-          <input type="range" id="checkDelaySlider" min="1" max="5" value="1" class="mt-2 w-full accent-red">
+          <input type="range" id="checkDelaySlider" min="0.5" max="4" step="0.5" value="1" class="mt-2 w-full accent-red">
         </div>
         <div class="flex-1">
           <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Retry Delay</div>
           <div class="flex items-center gap-3">
             <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div id="retryDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-amber-500" style="width: 50%"></div>
+              <div id="retryDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-amber-500" style="width: 28%"></div>
             </div>
             <span id="retryDelayValue" class="w-10 text-right font-mono text-xl font-light text-zinc-100">5</span>
             <span class="text-xs text-zinc-500">min</span>
           </div>
-          <input type="range" id="retryDelaySlider" min="1" max="10" value="5" class="mt-2 w-full accent-amber">
+          <input type="range" id="retryDelaySlider" min="3" max="10" step="1" value="5" class="mt-2 w-full accent-amber">
         </div>
         <button id="saveSettingsBtn" class="rounded-xl bg-zinc-100 px-6 py-3 text-xs font-medium uppercase tracking-widest text-zinc-900 transition-colors hover:bg-white">
           Save
@@ -637,18 +637,26 @@
       }
     }
 
+    // Format check delay as m:ss
+    function formatCheckDelay(minutes) {
+      const totalSec = Math.round(minutes * 60);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
     // Update settings UI
     function updateSettingsUI() {
       document.getElementById('closeDelayValue').textContent = settings.closeDelay;
-      document.getElementById('closeDelayBar').style.width = `${(settings.closeDelay / 15) * 100}%`;
+      document.getElementById('closeDelayBar').style.width = `${((settings.closeDelay - 5) / 55) * 100}%`;
       document.getElementById('closeDelaySlider').value = settings.closeDelay;
 
-      document.getElementById('checkDelayValue').textContent = settings.checkDelay;
-      document.getElementById('checkDelayBar').style.width = `${(settings.checkDelay / 5) * 100}%`;
+      document.getElementById('checkDelayValue').textContent = formatCheckDelay(settings.checkDelay);
+      document.getElementById('checkDelayBar').style.width = `${((settings.checkDelay - 0.5) / 3.5) * 100}%`;
       document.getElementById('checkDelaySlider').value = settings.checkDelay;
 
       document.getElementById('retryDelayValue').textContent = settings.retryDelay;
-      document.getElementById('retryDelayBar').style.width = `${(settings.retryDelay / 10) * 100}%`;
+      document.getElementById('retryDelayBar').style.width = `${((settings.retryDelay - 3) / 7) * 100}%`;
       document.getElementById('retryDelaySlider').value = settings.retryDelay;
     }
 
@@ -684,19 +692,19 @@
     document.getElementById('closeDelaySlider').addEventListener('input', (e) => {
       settings.closeDelay = parseInt(e.target.value);
       document.getElementById('closeDelayValue').textContent = settings.closeDelay;
-      document.getElementById('closeDelayBar').style.width = `${(settings.closeDelay / 15) * 100}%`;
+      document.getElementById('closeDelayBar').style.width = `${((settings.closeDelay - 5) / 55) * 100}%`;
     });
 
     document.getElementById('checkDelaySlider').addEventListener('input', (e) => {
-      settings.checkDelay = parseInt(e.target.value);
-      document.getElementById('checkDelayValue').textContent = settings.checkDelay;
-      document.getElementById('checkDelayBar').style.width = `${(settings.checkDelay / 5) * 100}%`;
+      settings.checkDelay = parseFloat(e.target.value);
+      document.getElementById('checkDelayValue').textContent = formatCheckDelay(settings.checkDelay);
+      document.getElementById('checkDelayBar').style.width = `${((settings.checkDelay - 0.5) / 3.5) * 100}%`;
     });
 
     document.getElementById('retryDelaySlider').addEventListener('input', (e) => {
       settings.retryDelay = parseInt(e.target.value);
       document.getElementById('retryDelayValue').textContent = settings.retryDelay;
-      document.getElementById('retryDelayBar').style.width = `${(settings.retryDelay / 10) * 100}%`;
+      document.getElementById('retryDelayBar').style.width = `${((settings.retryDelay - 3) / 7) * 100}%`;
     });
 
     document.getElementById('tabState').addEventListener('click', () => {
