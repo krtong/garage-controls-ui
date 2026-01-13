@@ -633,10 +633,10 @@
         updateDoorCard(card, door, now);
       });
 
-      // Update events columns by door
+      // Update events columns by door (both mobile and desktop versions)
       ['Left', 'Middle', 'Right'].forEach(doorName => {
-        const column = document.querySelector(`.events-column[data-door="${doorName}"]`);
-        if (!column) return;
+        const columns = document.querySelectorAll(`.events-column[data-door="${doorName}"]`);
+        if (!columns.length) return;
 
         // Filter events for this door and only OPEN/CLOSED types
         const doorEvents = events.filter(e => {
@@ -676,7 +676,10 @@
           });
         });
 
-        column.innerHTML = html || '<div class="px-3 py-4 text-center text-xs text-zinc-600">No events</div>';
+        // Update all columns (mobile + desktop)
+        columns.forEach(col => {
+          col.innerHTML = html || '<div class="px-3 py-4 text-center text-xs text-zinc-600">No events</div>';
+        });
       });
 
       // Update status
