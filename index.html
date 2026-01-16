@@ -116,43 +116,53 @@
   <!-- Settings Panel -->
   <div id="settingsPanel" class="relative z-20 hidden border-b border-zinc-800/50 bg-zinc-900/25 backdrop-blur-sm">
     <div class="mx-auto max-w-6xl px-4 sm:px-8 py-4 sm:py-6">
-      <div class="flex flex-col gap-6 md:flex-row md:items-end md:gap-8">
-        <div class="flex-1">
-          <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Close Delay</div>
-          <div class="flex items-center gap-3">
-            <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
-            <div id="closeDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-blue-500" style="width: 28%"></div>
-            </div>
-            <span id="closeDelayValue" class="w-10 text-right font-mono text-xl font-light text-zinc-100">10</span>
-            <span class="text-xs text-zinc-500">min</span>
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div id="settingsDoorLabel" class="text-[10px] uppercase tracking-widest text-zinc-500">Door settings: Left</div>
+          <div class="flex rounded-xl bg-zinc-900/50 p-1 border border-zinc-800/50">
+            <button class="settings-door-tab flex-1 rounded-lg px-3 py-2 text-[10px] uppercase tracking-widest transition-colors bg-zinc-800/70 text-zinc-100" data-door="Left">Left</button>
+            <button class="settings-door-tab flex-1 rounded-lg px-3 py-2 text-[10px] uppercase tracking-widest transition-colors text-zinc-500" data-door="Middle">Middle</button>
+            <button class="settings-door-tab flex-1 rounded-lg px-3 py-2 text-[10px] uppercase tracking-widest transition-colors text-zinc-500" data-door="Right">Right</button>
           </div>
-          <input type="range" id="closeDelaySlider" min="0" max="18" step="1" value="5" class="mt-2 w-full accent-blue">
         </div>
-        <div class="flex-1">
-          <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Check Delay</div>
-          <div class="flex items-center gap-3">
-            <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div id="checkDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-red-500" style="width: 14%"></div>
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:gap-8">
+          <div class="flex-1">
+            <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Close Delay</div>
+            <div class="flex items-center gap-3">
+              <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+              <div id="closeDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-blue-500" style="width: 28%"></div>
+              </div>
+              <span id="closeDelayValue" class="w-10 text-right font-mono text-xl font-light text-zinc-100">10</span>
+              <span class="text-xs text-zinc-500">min</span>
             </div>
-            <span id="checkDelayValue" class="w-20 text-right font-mono text-xl font-light text-zinc-100">1m</span>
-            <span class="text-xs text-zinc-500"></span>
+            <input type="range" id="closeDelaySlider" min="0" max="18" step="1" value="5" class="mt-2 w-full accent-blue">
           </div>
-          <input type="range" id="checkDelaySlider" min="0.5" max="4" step="0.5" value="1" class="mt-2 w-full accent-red">
-        </div>
-        <div class="flex-1">
-          <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Retry Delay</div>
-          <div class="flex items-center gap-3">
-            <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div id="retryDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-amber-500" style="width: 28%"></div>
+          <div class="flex-1">
+            <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Check Delay</div>
+            <div class="flex items-center gap-3">
+              <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                <div id="checkDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-red-500" style="width: 14%"></div>
+              </div>
+              <span id="checkDelayValue" class="w-20 text-right font-mono text-xl font-light text-zinc-100">1m</span>
+              <span class="text-xs text-zinc-500"></span>
             </div>
-            <span id="retryDelayValue" class="w-10 text-right font-mono text-xl font-light text-zinc-100">5</span>
-            <span class="text-xs text-zinc-500">min</span>
+            <input type="range" id="checkDelaySlider" min="0.5" max="4" step="0.5" value="1" class="mt-2 w-full accent-red">
           </div>
-          <input type="range" id="retryDelaySlider" min="3" max="10" step="1" value="5" class="mt-2 w-full accent-amber">
+          <div class="flex-1">
+            <div class="mb-3 text-[10px] uppercase tracking-widest text-zinc-500">Retry Delay</div>
+            <div class="flex items-center gap-3">
+              <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                <div id="retryDelayBar" class="absolute inset-y-0 left-0 rounded-full bg-amber-500" style="width: 28%"></div>
+              </div>
+              <span id="retryDelayValue" class="w-10 text-right font-mono text-xl font-light text-zinc-100">5</span>
+              <span class="text-xs text-zinc-500">min</span>
+            </div>
+            <input type="range" id="retryDelaySlider" min="3" max="10" step="1" value="5" class="mt-2 w-full accent-amber">
+          </div>
+          <button id="saveSettingsBtn" class="w-full rounded-xl bg-zinc-100 px-6 py-3 text-xs font-medium uppercase tracking-widest text-zinc-900 transition-colors hover:bg-white md:w-auto">
+            Save
+          </button>
         </div>
-        <button id="saveSettingsBtn" class="w-full rounded-xl bg-zinc-100 px-6 py-3 text-xs font-medium uppercase tracking-widest text-zinc-900 transition-colors hover:bg-white md:w-auto">
-          Save
-        </button>
       </div>
     </div>
   </div>
@@ -305,11 +315,18 @@
     const HOLD_MS = 1000;
     const CIRCUMFERENCE = 2 * Math.PI * 58;
     const CLOSE_DELAY_STEPS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 25, 30, 35, 40, 45, 50, 60];
+    const DOOR_NAMES = ['Left', 'Middle', 'Right'];
     const GUEST_EMAIL = 'guest@home.local';
 
     // State
     let systemEnabled = true;
     let settings = { closeDelay: 10, checkDelay: 1, retryDelay: 5 };
+    let doorSettings = {
+      Left: { closeDelay: 10, checkDelay: 1, retryDelay: 5 },
+      Middle: { closeDelay: 10, checkDelay: 1, retryDelay: 5 },
+      Right: { closeDelay: 10, checkDelay: 1, retryDelay: 5 }
+    };
+    let activeSettingsDoor = 'Left';
     let doors = [];
     let events = [];
     let activeTab = 'state';
@@ -333,6 +350,15 @@
       const m = Math.floor(s / 60);
       const r = s % 60;
       return `${m}:${String(r).padStart(2, '0')}`;
+    }
+
+    function getDoorSettings(doorName) {
+      const cfg = doorSettings[doorName] || {};
+      return {
+        closeDelay: Number(cfg.closeDelay ?? settings.closeDelay),
+        checkDelay: Number(cfg.checkDelay ?? settings.checkDelay),
+        retryDelay: Number(cfg.retryDelay ?? settings.retryDelay)
+      };
     }
 
     function snapCloseDelay(value) {
@@ -388,11 +414,12 @@
         return { phase: 'closed', remaining: 0, total: 1, progress: 1, dueAt: null };
       }
 
+      const doorConfig = getDoorSettings(door.door);
       const openedAt = new Date(door.last_open).getTime();
       const hasRetried = door.last_close_attempt_at && new Date(door.last_close_attempt_at).getTime() > openedAt;
       const phase = hasRetried ? 'retry' : 'initial';
       const baseAt = phase === 'initial' ? openedAt : new Date(door.last_close_attempt_at).getTime();
-      const delayMin = phase === 'initial' ? settings.closeDelay : settings.retryDelay;
+      const delayMin = phase === 'initial' ? doorConfig.closeDelay : doorConfig.retryDelay;
 
       const rawTarget = baseAt + delayMin * 60 * 1000;
       const dueAt = ceilToCron(rawTarget);
@@ -425,6 +452,7 @@
     // Update door card
     function updateDoorCard(card, door, now) {
       const isOpen = door.is_open;
+      const doorConfig = getDoorSettings(door.door);
       const nextAction = String(door.next_action || '').toLowerCase();
       const nextAt = door.next_action_at ? new Date(door.next_action_at).getTime() : null;
       const hasNextAction = Boolean(nextAction) && nextAt !== null;
@@ -442,7 +470,7 @@
       let autoClosing = false;
 
       if (isClosing) {
-        const totalSec = isVerifying ? settings.checkDelay * 60 : (CRON_MS / 1000);
+        const totalSec = isVerifying ? doorConfig.checkDelay * 60 : (CRON_MS / 1000);
         countdown = computeTimer(nextAt, totalSec, now);
         countdown.phase = isVerifying ? 'verifying' : 'queued';
         autoClosing = true;
@@ -803,8 +831,35 @@
         settings.closeDelay = settingsData.close_delay_min || 10;
         settings.checkDelay = settingsData.check_delay_min || 1;
         settings.retryDelay = settingsData.retry_delay_min || 5;
-        updateSettingsUI();
       }
+
+      // Fetch per-door settings
+      const { data: doorSettingsData, error: doorSettingsError } = await supabase
+        .from('garage_door_settings')
+        .select('*')
+        .order('door');
+
+      if (doorSettingsError) {
+        console.error('Failed to load door settings:', doorSettingsError);
+        DOOR_NAMES.forEach((doorName) => {
+          doorSettings[doorName] = {
+            closeDelay: settings.closeDelay,
+            checkDelay: settings.checkDelay,
+            retryDelay: settings.retryDelay
+          };
+        });
+      } else {
+        DOOR_NAMES.forEach((doorName) => {
+          const row = (doorSettingsData || []).find((item) => item.door === doorName) || {};
+          doorSettings[doorName] = {
+            closeDelay: Number(row.close_delay_min ?? settings.closeDelay),
+            checkDelay: Number(row.check_delay_min ?? settings.checkDelay),
+            retryDelay: Number(row.retry_delay_min ?? settings.retryDelay)
+          };
+        });
+      }
+
+      updateSettingsUI();
 
       render();
     }
@@ -821,19 +876,30 @@
 
     // Update settings UI
     function updateSettingsUI() {
-      settings.closeDelay = snapCloseDelay(settings.closeDelay);
-      const closeDelayIdx = closeDelayIndex(settings.closeDelay);
-      document.getElementById('closeDelayValue').textContent = settings.closeDelay;
+      const doorConfig = getDoorSettings(activeSettingsDoor);
+      doorConfig.closeDelay = snapCloseDelay(doorConfig.closeDelay);
+      doorSettings[activeSettingsDoor] = doorConfig;
+
+      const closeDelayIdx = closeDelayIndex(doorConfig.closeDelay);
+      document.getElementById('closeDelayValue').textContent = doorConfig.closeDelay;
       document.getElementById('closeDelayBar').style.width = `${(closeDelayIdx / (CLOSE_DELAY_STEPS.length - 1)) * 100}%`;
       document.getElementById('closeDelaySlider').value = closeDelayIdx;
 
-      document.getElementById('checkDelayValue').textContent = formatCheckDelay(settings.checkDelay);
-      document.getElementById('checkDelayBar').style.width = `${((settings.checkDelay - 0.5) / 3.5) * 100}%`;
-      document.getElementById('checkDelaySlider').value = settings.checkDelay;
+      document.getElementById('checkDelayValue').textContent = formatCheckDelay(doorConfig.checkDelay);
+      document.getElementById('checkDelayBar').style.width = `${((doorConfig.checkDelay - 0.5) / 3.5) * 100}%`;
+      document.getElementById('checkDelaySlider').value = doorConfig.checkDelay;
 
-      document.getElementById('retryDelayValue').textContent = settings.retryDelay;
-      document.getElementById('retryDelayBar').style.width = `${((settings.retryDelay - 3) / 7) * 100}%`;
-      document.getElementById('retryDelaySlider').value = settings.retryDelay;
+      document.getElementById('retryDelayValue').textContent = doorConfig.retryDelay;
+      document.getElementById('retryDelayBar').style.width = `${((doorConfig.retryDelay - 3) / 7) * 100}%`;
+      document.getElementById('retryDelaySlider').value = doorConfig.retryDelay;
+
+      document.getElementById('settingsDoorLabel').textContent = `Door settings: ${activeSettingsDoor}`;
+      document.querySelectorAll('.settings-door-tab').forEach(tab => {
+        const isActive = tab.dataset.door === activeSettingsDoor;
+        tab.className = isActive
+          ? 'settings-door-tab flex-1 rounded-lg px-3 py-2 text-[10px] uppercase tracking-widest transition-colors bg-zinc-800/70 text-zinc-100'
+          : 'settings-door-tab flex-1 rounded-lg px-3 py-2 text-[10px] uppercase tracking-widest transition-colors text-zinc-500';
+      });
     }
 
     // Save settings
@@ -842,19 +908,25 @@
         alert('Guest access is view-only.');
         return;
       }
-      const { error } = await supabase
-        .from('garage_settings')
-        .update({
-          close_delay_min: settings.closeDelay,
-          check_delay_min: settings.checkDelay,
-          retry_delay_min: settings.retryDelay,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', 'global');
+      const nowIso = new Date().toISOString();
+      const payload = DOOR_NAMES.map((doorName) => {
+        const cfg = getDoorSettings(doorName);
+        return {
+          door: doorName,
+          close_delay_min: cfg.closeDelay,
+          check_delay_min: cfg.checkDelay,
+          retry_delay_min: cfg.retryDelay,
+          updated_at: nowIso
+        };
+      });
 
-      if (error) {
-        console.error('Failed to save settings:', error);
-        alert(`Failed to save settings: ${error.message}`);
+      const { error: doorError } = await supabase
+        .from('garage_door_settings')
+        .upsert(payload, { onConflict: 'door' });
+
+      if (doorError) {
+        console.error('Failed to save door settings:', doorError);
+        alert(`Failed to save settings: ${doorError.message}`);
         return;
       }
 
@@ -870,23 +942,38 @@
 
     document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
 
+    document.querySelectorAll('.settings-door-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const door = tab.dataset.door;
+        if (!door) return;
+        activeSettingsDoor = door;
+        updateSettingsUI();
+      });
+    });
+
     document.getElementById('closeDelaySlider').addEventListener('input', (e) => {
       const idx = clamp(parseInt(e.target.value, 10), 0, CLOSE_DELAY_STEPS.length - 1);
-      settings.closeDelay = CLOSE_DELAY_STEPS[idx];
-      document.getElementById('closeDelayValue').textContent = settings.closeDelay;
+      const cfg = getDoorSettings(activeSettingsDoor);
+      cfg.closeDelay = CLOSE_DELAY_STEPS[idx];
+      doorSettings[activeSettingsDoor] = cfg;
+      document.getElementById('closeDelayValue').textContent = cfg.closeDelay;
       document.getElementById('closeDelayBar').style.width = `${(idx / (CLOSE_DELAY_STEPS.length - 1)) * 100}%`;
     });
 
     document.getElementById('checkDelaySlider').addEventListener('input', (e) => {
-      settings.checkDelay = parseFloat(e.target.value);
-      document.getElementById('checkDelayValue').textContent = formatCheckDelay(settings.checkDelay);
-      document.getElementById('checkDelayBar').style.width = `${((settings.checkDelay - 0.5) / 3.5) * 100}%`;
+      const cfg = getDoorSettings(activeSettingsDoor);
+      cfg.checkDelay = parseFloat(e.target.value);
+      doorSettings[activeSettingsDoor] = cfg;
+      document.getElementById('checkDelayValue').textContent = formatCheckDelay(cfg.checkDelay);
+      document.getElementById('checkDelayBar').style.width = `${((cfg.checkDelay - 0.5) / 3.5) * 100}%`;
     });
 
     document.getElementById('retryDelaySlider').addEventListener('input', (e) => {
-      settings.retryDelay = parseInt(e.target.value);
-      document.getElementById('retryDelayValue').textContent = settings.retryDelay;
-      document.getElementById('retryDelayBar').style.width = `${((settings.retryDelay - 3) / 7) * 100}%`;
+      const cfg = getDoorSettings(activeSettingsDoor);
+      cfg.retryDelay = parseInt(e.target.value);
+      doorSettings[activeSettingsDoor] = cfg;
+      document.getElementById('retryDelayValue').textContent = cfg.retryDelay;
+      document.getElementById('retryDelayBar').style.width = `${((cfg.retryDelay - 3) / 7) * 100}%`;
     });
 
     document.getElementById('tabState').addEventListener('click', () => {
