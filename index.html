@@ -510,6 +510,7 @@
       const isImminent = nextAt !== null && nextAt > now && (nextAt - now) <= CRON_MS;
       const isQueuedClose = isOpen && nextActionKey === 'close_attempt' && isImminent;
       const isVerifying = isOpen && nextActionKey === 'close_check' && nextAt > now;
+      const isOverdue = isOpen && nextActionKey === 'close_attempt' && nextAt !== null && nextAt <= now;
       const isClosing = isQueuedClose || isVerifying;
 
       // Schedule pill
@@ -547,6 +548,10 @@
         countdown.phase = isVerifying ? 'verifying' : 'queued';
         autoClosing = true;
         ringColor = '#ef4444';
+      } else if (isOverdue) {
+        countdown = computeTimer(nextAt, doorConfig.closeDelay * 60, now);
+        countdown.phase = 'overdue';
+        ringColor = '#f59e0b';
       } else if (isOpen) {
         countdown = computeCountdown(door, now);
         ringColor = countdown.phase === 'retry' ? '#f59e0b' : '#3b82f6';
@@ -573,7 +578,9 @@
       if (isOpen) {
         const timeClass = autoClosing
           ? 'text-red-300'
-          : (countdown.phase === 'retry' ? 'text-amber-300' : 'text-blue-300');
+          : (countdown.phase === 'retry' || countdown.phase === 'overdue'
+            ? 'text-amber-300'
+            : 'text-blue-300');
         let label = 'until close';
         if (countdown.phase === 'queued') {
           label = 'close queued';
@@ -581,6 +588,8 @@
           label = 'verifying';
         } else if (countdown.phase === 'retry') {
           label = 'until retry';
+        } else if (countdown.phase === 'overdue') {
+          label = 'close overdue';
         }
 
         const hasRetried = door.last_close_attempt_at && door.last_open &&
@@ -642,6 +651,9 @@
       } else if (countdown.phase === 'verifying') {
         nextActionEl.textContent = 'Verifying close';
         nextIn.textContent = `~${formatCountdown(countdown.remaining)}`;
+      } else if (countdown.phase === 'overdue') {
+        nextActionEl.textContent = 'Close overdue';
+        nextIn.textContent = '—';
       } else if (isOpen) {
         nextActionEl.textContent = countdown.phase === 'retry' ? 'Retry close' : 'Close attempt';
         nextIn.textContent = `~${formatCountdown(countdown.remaining)}`;
