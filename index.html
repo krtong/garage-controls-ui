@@ -436,6 +436,19 @@
       });
     }
 
+    function formatClock(ts) {
+      if (!ts) return '—';
+      const date = new Date(ts);
+      if (Number.isNaN(date.getTime())) return '—';
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function parseTimestamp(value) {
+      if (!value) return null;
+      const parsed = new Date(value).getTime();
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
     // Compute countdown for open door
     function computeCountdown(door, now) {
       if (!door.is_open || !door.last_open) {
@@ -443,14 +456,24 @@
       }
 
       const doorConfig = getDoorSettings(door.door);
-      const openedAt = new Date(door.last_open).getTime();
-      const hasRetried = door.last_close_attempt_at && new Date(door.last_close_attempt_at).getTime() > openedAt;
+      const openedAt = parseTimestamp(door.last_open);
+      if (!openedAt) {
+        return { phase: 'unscheduled', remaining: 0, total: 1, progress: 1, dueAt: null };
+      }
+      const lastAttemptAt = parseTimestamp(door.last_close_attempt_at);
+      const hasRetried = lastAttemptAt && lastAttemptAt > openedAt;
       const phase = hasRetried ? 'retry' : 'initial';
-      const baseAt = phase === 'initial' ? openedAt : new Date(door.last_close_attempt_at).getTime();
+      const baseAt = phase === 'initial' ? openedAt : lastAttemptAt;
       const delayMin = phase === 'initial' ? doorConfig.closeDelay : doorConfig.retryDelay;
 
-      const rawTarget = baseAt + delayMin * 60 * 1000;
-      const dueAt = ceilToCron(rawTarget);
+      const scheduledAt = parseTimestamp(door.next_action_at);
+      let dueAt = null;
+      if (scheduledAt && scheduledAt >= baseAt - 5000) {
+        dueAt = scheduledAt;
+      } else {
+        const rawTarget = baseAt + delayMin * 60 * 1000;
+        dueAt = ceilToCron(rawTarget);
+      }
 
       const total = Math.max(1, (dueAt - baseAt) / 1000);
       const remaining = clamp((dueAt - now) / 1000, 0, total);
@@ -488,6 +511,26 @@
       const isQueuedClose = isOpen && nextActionKey === 'close_attempt' && isImminent;
       const isVerifying = isOpen && nextActionKey === 'close_check' && nextAt > now;
       const isClosing = isQueuedClose || isVerifying;
+
+      // Schedule pill
+      const scheduleEl = card.querySelector('.door-schedule');
+      if (scheduleEl) {
+        const scheduleBase = 'door-schedule mt-1 inline-flex max-w-full items-center justify-center gap-2 rounded-full px-2 py-0.5 text-center text-[9px] sm:text-[10px] uppercase tracking-widest break-words leading-tight';
+        const nextAtMs = parseTimestamp(door.next_action_at);
+        if (!isOpen) {
+          scheduleEl.textContent = 'No Schedule';
+          scheduleEl.className = `${scheduleBase} text-zinc-500 bg-zinc-700/35`;
+        } else if (nextAtMs && nextAtMs > now) {
+          scheduleEl.textContent = `Close @ ${formatClock(nextAtMs)}`;
+          scheduleEl.className = `${scheduleBase} text-blue-200 bg-blue-500/10`;
+        } else if (nextAtMs && nextAtMs <= now) {
+          scheduleEl.textContent = 'Close overdue';
+          scheduleEl.className = `${scheduleBase} text-amber-200 bg-amber-500/15`;
+        } else {
+          scheduleEl.textContent = 'Awaiting schedule';
+          scheduleEl.className = `${scheduleBase} text-zinc-400 bg-zinc-700/35`;
+        }
+      }
 
       // Ring
       const ringProgress = card.querySelector('.ring-progress');
