@@ -356,6 +356,7 @@
     let activeSettingsDoor = 'Left';
     let doors = [];
     let events = [];
+    let eventsLoading = false;
     let activeTab = 'state';
     let showSettings = false;
     let isGuest = false;
@@ -752,6 +753,12 @@
       ['Left', 'Middle', 'Right'].forEach(doorName => {
         const columns = document.querySelectorAll(`.events-column[data-door="${doorName}"]`);
         if (!columns.length) return;
+        if (eventsLoading && (!events || events.length === 0)) {
+          columns.forEach(col => {
+            col.innerHTML = '<div class="px-3 py-4 text-center text-xs text-zinc-500">Loading events…</div>';
+          });
+          return;
+        }
 
         // Filter events for this door and only OPEN/CLOSED types
         const doorEvents = events.filter(e => {
@@ -856,6 +863,10 @@
         }
 
         // Fetch recent events
+        eventsLoading = true;
+        if (!events.length) {
+          renderEvents();
+        }
         const { data: eventData, error: eventError } = await supabase
           .from('garage_events')
           .select('*')
@@ -866,8 +877,9 @@
           // keep previous data on transient failures
         } else {
           events = eventData || [];
-          renderEvents();
         }
+        eventsLoading = false;
+        renderEvents();
 
         // Fetch settings
         const { data: settingsData, error: settingsError } = await supabase
