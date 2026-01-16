@@ -1080,8 +1080,17 @@
         return;
       }
 
+      const { error: rescheduleError } = await supabase.functions.invoke('garage-reschedule', {
+        body: { doors: DOOR_NAMES }
+      });
+      if (rescheduleError) {
+        console.warn('Failed to reschedule open doors:', rescheduleError);
+      }
+
       settingsPanel.classList.add('hidden');
       showSettings = false;
+
+      fetchData();
     }
 
     // Event listeners
