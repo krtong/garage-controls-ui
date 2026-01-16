@@ -510,11 +510,9 @@
       const nextActionKey = String(door.next_action || '').toLowerCase();
       const nextAt = door.next_action_at ? new Date(door.next_action_at).getTime() : null;
       const hasNextAction = Boolean(nextActionKey) && nextAt !== null;
-      const isImminent = nextAt !== null && nextAt > now && (nextAt - now) <= CRON_MS;
-      const isQueuedClose = isOpen && nextActionKey === 'close_attempt' && isImminent;
       const isVerifying = isOpen && nextActionKey === 'close_check' && nextAt > now;
       const isOverdue = isOpen && nextActionKey === 'close_attempt' && nextAt !== null && nextAt <= now;
-      const isClosing = isQueuedClose || isVerifying;
+      const isClosing = isVerifying;
 
       // Schedule pill
       const scheduleEl = card.querySelector('.door-schedule');
@@ -546,9 +544,9 @@
       let autoClosing = false;
 
       if (isClosing) {
-        const totalSec = isVerifying ? doorConfig.checkDelay * 60 : (CRON_MS / 1000);
+        const totalSec = doorConfig.checkDelay * 60;
         countdown = computeTimer(nextAt, totalSec, now);
-        countdown.phase = isVerifying ? 'verifying' : 'queued';
+        countdown.phase = 'verifying';
         autoClosing = true;
         ringColor = '#ef4444';
       } else if (isOverdue) {
@@ -585,9 +583,7 @@
             ? 'text-amber-300'
             : 'text-blue-300');
         let label = 'until close';
-        if (countdown.phase === 'queued') {
-          label = 'close queued';
-        } else if (countdown.phase === 'verifying') {
+        if (countdown.phase === 'verifying') {
           label = 'verifying';
         } else if (countdown.phase === 'retry') {
           label = 'until retry';
@@ -648,10 +644,7 @@
       const nextActionEl = card.querySelector('.next-action');
       const nextIn = card.querySelector('.next-in');
 
-      if (countdown.phase === 'queued') {
-        nextActionEl.textContent = 'Close queued';
-        nextIn.textContent = `~${formatCountdown(countdown.remaining)}`;
-      } else if (countdown.phase === 'verifying') {
+      if (countdown.phase === 'verifying') {
         nextActionEl.textContent = 'Verifying close';
         nextIn.textContent = `~${formatCountdown(countdown.remaining)}`;
       } else if (countdown.phase === 'overdue') {
