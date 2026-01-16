@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Garage Controller</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='16' width='48' height='40' rx='4' fill='%2318181b' stroke='%2310b981' stroke-width='3'/%3E%3Cpath d='M12 24h40M12 32h40M12 40h40M12 48h40' stroke='%233f3f46' stroke-width='2'/%3E%3Cpath d='M28 8h8v8h-8z' fill='%2310b981'/%3E%3C/svg%3E">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer id="tailwindCdn" src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -29,6 +29,27 @@
     }
   </script>
   <style>
+    body { margin: 0; background: #09090b; color: #e4e4e7; }
+    .hidden { display: none !important; }
+    .boot-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      background: #09090b;
+      color: #e4e4e7;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      z-index: 50;
+      transition: opacity 0.2s ease;
+    }
+    body[data-ready="1"] .boot-screen { opacity: 0; pointer-events: none; }
+    body:not([data-ready="1"]) #loginPage,
+    body:not([data-ready="1"]) #appContainer { visibility: hidden; }
     @keyframes pulse-glow {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
@@ -43,6 +64,11 @@
   </style>
 </head>
 <body class="min-h-screen bg-black text-zinc-100 overflow-x-hidden">
+  <div class="boot-screen" id="bootScreen">
+    <div style="font-size: 16px; letter-spacing: 0.35em;">Garage</div>
+    <div style="font-size: 11px; letter-spacing: 0.4em; color: #a1a1aa;">Controller</div>
+    <div style="font-size: 10px; letter-spacing: 0.25em; color: #52525b;">Loading…</div>
+  </div>
   <!-- Background -->
   <div class="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-black via-black to-emerald-950"></div>
   <div class="pointer-events-none fixed inset-0 z-0">
@@ -303,6 +329,27 @@
       <div class="action-container"></div>
     </div>
   </template>
+
+  <script>
+    (function () {
+      const markReady = () => {
+        if (document.body) document.body.dataset.ready = '1';
+      };
+
+      if (window.tailwind) {
+        markReady();
+        return;
+      }
+
+      const tw = document.getElementById('tailwindCdn');
+      if (tw) {
+        tw.addEventListener('load', markReady, { once: true });
+        tw.addEventListener('error', markReady, { once: true });
+      }
+
+      setTimeout(markReady, 1500);
+    })();
+  </script>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
